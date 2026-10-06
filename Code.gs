@@ -38,7 +38,8 @@ function doPost(e){
         absences:upsertMany_(ss,CONFIG.sheets.absences,d.absences||[]),
         lateness:upsertMany_(ss,CONFIG.sheets.lateness,d.lates||d.lateness||[]),
         signatures:upsertSignatures_(ss,d.signatures||{}),
-        settings:upsertSettings_(ss,d.settings||{})
+        settings:upsertSettings_(ss,d.settings||{}),
+        actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[])
       }});
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
@@ -47,10 +48,17 @@ function doPost(e){
       const d=body.data||{};
       const type=String(d.type||'');
       const id=String(d.id||'');
-      const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:'');
+      const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
       if(!sheetName||!id) throw new Error('بيانات الحذف غير مكتملة');
       const deleted=deleteById_(ss,sheetName,id);
       return json_({ok:deleted,deleted:deleted,action:'delete',type:type,id:id,error:deleted?'':('السجل غير موجود: '+id)});
+    }
+    if(action==='deleteAll'){
+      const d=body.data||{},type=String(d.type||'');
+      const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
+      if(!sheetName) throw new Error('نوع الحذف غير معروف');
+      const deleted=deleteAllRows_(ss,sheetName);
+      return json_({ok:true,deleted:true,action:'deleteAll',type:type,count:deleted});
     }
     const sheetName=map[action];
     if(!sheetName) throw new Error('Action غير معروف: '+action);
@@ -67,7 +75,9 @@ function setupSheets(){
     Absences:['id','empId','name','job','type','month','from','to','days','ref','reportDate','place','note','created'],
     Lateness:['id','empId','name','job','date','arrival','start','minutes','reason','note','created'],
     Signatures:['id','empId','name','type','data','at','createdAt'],
-    Settings:['key','value','updatedAt']
+    Settings:['key','value','updatedAt'],
+    Actions:['id','empId','name','job','date','type','text','note','created'],
+    Actions:['id','empId','name','job','date','type','text','note','created']
   };
   Object.keys(headers).forEach(k=>{const sh=getOrCreate_(ss,k);ensureHeaders_(sh,headers[k]);});
   return 'تم تهيئة جداول منصة ابن هشام';
@@ -79,7 +89,8 @@ function getAllData_(ss){
     absences:readSheet_(ss,CONFIG.sheets.absences),
     lates:readSheet_(ss,CONFIG.sheets.lateness),
     signatures:readSignatures_(ss),
-    settings:readSettings_(ss)
+    settings:readSettings_(ss),
+    actions:readSheet_(ss,CONFIG.sheets.actions)
   };
 }
 
@@ -104,6 +115,15 @@ function upsertMany_(ss,name,records){
 }
 function upsertSignatures_(ss,obj){
   let n=0;Object.keys(obj||{}).forEach(id=>{const s=obj[id]||{};upsertOne_(ss,CONFIG.sheets.signatures,{id:id,empId:id,name:s.name||'',type:s.type||'',data:s.data||'',at:s.at||'',createdAt:s.createdAt||s.at||''});n++;});return n;
+}
+function deleteAllRows_(ss,name){
+  const sh=getOrCreate_(ss,name);
+  const last=sh.getLastRow();
+  if(last<2)return 0;
+  const count=last-1;
+  sh.deleteRows(2,count);
+  SpreadsheetApp.flush();
+  return count;
 }
 function deleteById_(ss,name,id){
   const sh=getOrCreate_(ss,name);
