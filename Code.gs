@@ -135,18 +135,29 @@ function deleteAllRows_(ss,name){
 }
 function deleteById_(ss,name,id){
   const sh=getOrCreate_(ss,name);
-  const headers=getHeaders_(sh);
+  const lastRow=sh.getLastRow(), lastCol=sh.getLastColumn();
+  if(lastRow<2 || lastCol<1)return false;
+  const wanted=String(id===null||id===undefined?'':id).trim();
+  if(!wanted)return false;
+  const header=sh.getRange(1,1,1,lastCol).getDisplayValues()[0].map(x=>String(x||'').trim().toLowerCase());
   const keyField=name==='Settings'?'key':'id';
-  if(!headers.length || sh.getLastRow()<2)return false;
-  const col=headers.indexOf(keyField)+1;
-  if(col<1)return false;
-  const wanted=String(id).trim();
-  const values=sh.getRange(2,col,sh.getLastRow()-1,1).getValues();
-  const display=sh.getRange(2,col,sh.getLastRow()-1,1).getDisplayValues();
-  for(let i=0;i<values.length;i++){
-    const raw=values[i][0]===null||values[i][0]===undefined?'':String(values[i][0]).trim();
-    const shown=String(display[i][0]||'').trim();
-    if(raw===wanted || shown===wanted){
+  let col=header.indexOf(keyField)+1;
+  // دعم اختلاف كتابة رأس العمود مثل ID أو id أو وجود مسافات.
+  if(col<1)col=header.findIndex(x=>x.replace(/[^a-z]/g,'')===keyField)+1;
+  if(col>0){
+    const vals=sh.getRange(2,col,lastRow-1,1).getDisplayValues();
+    for(let i=0;i<vals.length;i++){
+      if(String(vals[i][0]||'').trim()===wanted){
+        sh.deleteRow(i+2);
+        SpreadsheetApp.flush();
+        return true;
+      }
+    }
+  }
+  // احتياط: ابحث عن الـID في كامل الصف إذا كان ملف الشيت القديم لا يملك رأس id مطابقًا.
+  const rows=sh.getRange(2,1,lastRow-1,lastCol).getDisplayValues();
+  for(let i=0;i<rows.length;i++){
+    if(rows[i].some(v=>String(v||'').trim()===wanted)){
       sh.deleteRow(i+2);
       SpreadsheetApp.flush();
       return true;
