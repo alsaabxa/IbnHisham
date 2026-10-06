@@ -43,6 +43,15 @@ function doPost(e){
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
     if(action==='settings'){upsertSettings_(ss,body.data||{});return json_({ok:true,saved:true,action:action});}
+    if(action==='delete'){
+      const d=body.data||{};
+      const type=String(d.type||'');
+      const id=String(d.id||'');
+      const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:'');
+      if(!sheetName||!id) throw new Error('بيانات الحذف غير مكتملة');
+      const deleted=deleteById_(ss,sheetName,id);
+      return json_({ok:deleted,deleted:deleted,action:'delete',type:type,id:id,error:deleted?'':('السجل غير موجود: '+id)});
+    }
     const sheetName=map[action];
     if(!sheetName) throw new Error('Action غير معروف: '+action);
     upsertOne_(ss,sheetName,body.data||{});
@@ -95,6 +104,15 @@ function upsertMany_(ss,name,records){
 }
 function upsertSignatures_(ss,obj){
   let n=0;Object.keys(obj||{}).forEach(id=>{const s=obj[id]||{};upsertOne_(ss,CONFIG.sheets.signatures,{id:id,empId:id,name:s.name||'',type:s.type||'',data:s.data||'',at:s.at||'',createdAt:s.createdAt||s.at||''});n++;});return n;
+}
+function deleteById_(ss,name,id){
+  const sh=getOrCreate_(ss,name);
+  const headers=getHeaders_(sh);
+  const keyField=name==='Settings'?'key':'id';
+  const row=findRow_(sh,keyField,String(id),headers);
+  if(!row)return false;
+  sh.deleteRow(row);
+  return true;
 }
 function upsertOne_(ss,name,record){
   if(!record||(!record.id&&!record.key))return;
