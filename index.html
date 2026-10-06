@@ -26,7 +26,7 @@
 <div class="cards">
 <div class="stat"><b id="sEmp">0</b><span>إجمالي الموظفات</span></div><div class="stat"><b id="sAbs">0</b><span>سجلات الغياب</span></div><div class="stat"><b id="sLate">0</b><span>سجلات التأخير</span></div><div class="stat"><b id="sMin">0</b><span>دقائق التأخير</span></div>
 </div>
-<div class="card"><h2>تنبيه مهم</h2><div class="notice">هذه النسخة الأولية تعمل محليًا في المتصفح. عند ربط Google Sheets / Apps Script لاحقًا تصبح البيانات مركزية بين الأجهزة.</div></div>
+<div class="card"><h2>تنبيه مهم</h2><div class="notice">البيانات محفوظة محليًا وتتم مزامنتها تلقائيًا مع Google Sheets عبر Apps Script.</div></div>
 <div class="card"><h2>آخر العمليات</h2><div id="recent" class="empty">لا توجد سجلات بعد.</div></div>
 </section>
 
@@ -100,9 +100,41 @@
 <script>
 const KEY='ibnhisham_attendance_v1';
 const JOBS=['مديرة المدرسة','وكيلة','موجهة طلابية','م/ إداري','معلمة','مستخدمة'];
-const state=JSON.parse(localStorage.getItem(KEY)||'null')||{employees:[{"id":"seed-1","name":"مرفت خليل محمود سمندر","job":"مديرة المدرسة"},{"id":"seed-2","name":"هند هاشم علي الحجاجي","job":"وكيلة"},{"id":"seed-3","name":"حمده سلامه عابد الحربي","job":"موجهة طلابية"},{"id":"seed-4","name":"أميرة سليم غالي اللحياني","job":"م/ إداري"},{"id":"seed-5","name":"آمال حميد حميدي الحربي","job":"م/ إداري"},{"id":"seed-6","name":"حنان سالم عمر الحازمي","job":"م/ إداري"},{"id":"seed-7","name":"حنان مهنا حماد الحربي","job":"م/ إداري"},{"id":"seed-8","name":"سناء عبده أحمد الحرازي","job":"م/ إداري"},{"id":"seed-9","name":"صفية أحمد محمد عسيري","job":"م/ إداري"},{"id":"seed-10","name":"ابتسام صالح عبدالله الشميمري","job":"معلمة"},{"id":"seed-11","name":"أريج فهد محمد الرحيلي","job":"معلمة"},{"id":"seed-12","name":"أسماء عاطي عطية السيد","job":"معلمة"},{"id":"seed-13","name":"أشواق فيصل حميدان اللهيبي","job":"معلمة"},{"id":"seed-14","name":"أفراح مسفر عطالله الرحيلي","job":"معلمة"},{"id":"seed-15","name":"أمل حميد حميدي الحربي","job":"معلمة"},{"id":"seed-16","name":"أمل عواض عايض اللحياني","job":"معلمة"},{"id":"seed-17","name":"أمينة مقبل سلطان العتيبي","job":"معلمة"},{"id":"seed-18","name":"جميلة عوضة خاطر الزهراني","job":"معلمة"},{"id":"seed-19","name":"حنان نويشي ناشي الصاعدي","job":"معلمة"},{"id":"seed-20","name":"حنان محمد عطيان المغذوي","job":"معلمة"},{"id":"seed-21","name":"دلال مبارك حبيب الله القرشي","job":"معلمة"},{"id":"seed-22","name":"رحمه الحسن عبدالمعين القريقري","job":"معلمة"},{"id":"seed-23","name":"سامية قاسم مطلق العتيبي","job":"معلمة"},{"id":"seed-24","name":"سجى عوض مويس السلمي","job":"معلمة"},{"id":"seed-25","name":"سعاد سالم بتيع السلمي","job":"معلمة"},{"id":"seed-26","name":"صالحة صويلح حميد اللهيبي","job":"معلمة"},{"id":"seed-27","name":"عائشة محمد سلطان مجرشي","job":"معلمة"},{"id":"seed-28","name":"عبير محمد أحمد المنعمي","job":"معلمة"},{"id":"seed-29","name":"فوزية مهنا حماد الحربي","job":"معلمة"},{"id":"seed-30","name":"ماجدة مازن حسين الحربي","job":"معلمة"},{"id":"seed-31","name":"منال عبدالله سعد كليب","job":"معلمة"},{"id":"seed-32","name":"نوره جزاء فلاح العتيبي","job":"معلمة"},{"id":"seed-33","name":"نجوى سليم سالم الحربي","job":"معلمة"},{"id":"seed-34","name":"هدية سعيد مساعد السلمي","job":"معلمة"},{"id":"seed-35","name":"هنادي صادق صدقة الحربي","job":"معلمة"},{"id":"seed-36","name":"هند محمد عثمان نجمي","job":"معلمة"},{"id":"seed-37","name":"هنوف سعود حميد العوفي","job":"معلمة"},{"id":"seed-38","name":"وردة متعب خلف المخلفي","job":"معلمة"},{"id":"seed-39","name":"وفاء حميد حميدي الحربي","job":"معلمة"},{"id":"seed-40","name":"حصة زهيان رجيان العتيبي","job":"معلمة"},{"id":"seed-41","name":"سعده سميح حمدان المجنوني","job":"مستخدمة"},{"id":"seed-42","name":"وارد زنيد عزيز المقاطي","job":"مستخدمة"}],absences:[],lates:[],settings:{start:'07:00',school:'الجهة التعليمية'},signatures:{}};
+const state=JSON.parse(localStorage.getItem(KEY)||'null')||{employees:[{"id":"seed-1","name":"مرفت خليل محمود سمندر","job":"مديرة المدرسة"},{"id":"seed-2","name":"هند هاشم علي الحجاجي","job":"وكيلة"},{"id":"seed-3","name":"حمده سلامه عابد الحربي","job":"موجهة طلابية"},{"id":"seed-4","name":"أميرة سليم غالي اللحياني","job":"م/ إداري"},{"id":"seed-5","name":"آمال حميد حميدي الحربي","job":"م/ إداري"},{"id":"seed-6","name":"حنان سالم عمر الحازمي","job":"م/ إداري"},{"id":"seed-7","name":"حنان مهنا حماد الحربي","job":"م/ إداري"},{"id":"seed-8","name":"سناء عبده أحمد الحرازي","job":"م/ إداري"},{"id":"seed-9","name":"صفية أحمد محمد عسيري","job":"م/ إداري"},{"id":"seed-10","name":"ابتسام صالح عبدالله الشميمري","job":"معلمة"},{"id":"seed-11","name":"أريج فهد محمد الرحيلي","job":"معلمة"},{"id":"seed-12","name":"أسماء عاطي عطية السيد","job":"معلمة"},{"id":"seed-13","name":"أشواق فيصل حميدان اللهيبي","job":"معلمة"},{"id":"seed-14","name":"أفراح مسفر عطالله الرحيلي","job":"معلمة"},{"id":"seed-15","name":"أمل حميد حميدي الحربي","job":"معلمة"},{"id":"seed-16","name":"أمل عواض عايض اللحياني","job":"معلمة"},{"id":"seed-17","name":"أمينة مقبل سلطان العتيبي","job":"معلمة"},{"id":"seed-18","name":"جميلة عوضة خاطر الزهراني","job":"معلمة"},{"id":"seed-19","name":"حنان نويشي ناشي الصاعدي","job":"معلمة"},{"id":"seed-20","name":"حنان محمد عطيان المغذوي","job":"معلمة"},{"id":"seed-21","name":"دلال مبارك حبيب الله القرشي","job":"معلمة"},{"id":"seed-22","name":"رحمه الحسن عبدالمعين القريقري","job":"معلمة"},{"id":"seed-23","name":"سامية قاسم مطلق العتيبي","job":"معلمة"},{"id":"seed-24","name":"سجى عوض مويس السلمي","job":"معلمة"},{"id":"seed-25","name":"سعاد سالم بتيع السلمي","job":"معلمة"},{"id":"seed-26","name":"صالحة صويلح حميد اللهيبي","job":"معلمة"},{"id":"seed-27","name":"عائشة محمد سلطان مجرشي","job":"معلمة"},{"id":"seed-28","name":"عبير محمد أحمد المنعمي","job":"معلمة"},{"id":"seed-29","name":"فوزية مهنا حماد الحربي","job":"معلمة"},{"id":"seed-30","name":"ماجدة مازن حسين الحربي","job":"معلمة"},{"id":"seed-31","name":"منال عبدالله سعد كليب","job":"معلمة"},{"id":"seed-32","name":"نوره جزاء فلاح العتيبي","job":"معلمة"},{"id":"seed-33","name":"نجوى سليم سالم الحربي","job":"معلمة"},{"id":"seed-34","name":"هدية سعيد مساعد السلمي","job":"معلمة"},{"id":"seed-35","name":"هنادي صادق صدقة الحربي","job":"معلمة"},{"id":"seed-36","name":"هند محمد عثمان نجمي","job":"معلمة"},{"id":"seed-37","name":"هنوف سعود حميد العوفي","job":"معلمة"},{"id":"seed-38","name":"وردة متعب خلف المخلفي","job":"معلمة"},{"id":"seed-39","name":"وفاء حميد حميدي الحربي","job":"معلمة"},{"id":"seed-40","name":"حصة زهيان رجيان العتيبي","job":"معلمة"},{"id":"seed-41","name":"سعده سميح حمدان المجنوني","job":"مستخدمة"},{"id":"seed-42","name":"وارد زنيد عزيز المقاطي","job":"مستخدمة"}],absences:[],lates:[],settings:{start:'07:00',school:'الجهة التعليمية',apiUrl:'https://script.google.com/macros/s/AKfycbx-azGCwNmX8doVbpxrKWEAqjUZBVwIAaNUiwb32Z-MW3-eLA5FiezuxGCRsHaHJ3A2FQ/exec'},signatures:{}};
 const months=['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
-function save(){localStorage.setItem(KEY,JSON.stringify(state));refresh()}
+async function apiGet(action){
+  const url=(state.settings&&state.settings.apiUrl||'').trim(); if(!url)return null;
+  try{const r=await fetch(url+'?action='+encodeURIComponent(action),{cache:'no-store'});return await r.json();}
+  catch(e){console.warn('API GET',e);return null;}
+}
+async function apiPost(action,data){
+  const url=(state.settings&&state.settings.apiUrl||'').trim(); if(!url)return null;
+  try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data})});return await r.json();}
+  catch(e){console.warn('API POST',e);return null;}
+}
+let syncTimer=null;
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(state)); refresh();
+  clearTimeout(syncTimer); syncTimer=setTimeout(syncToSheets,250);
+}
+async function syncToSheets(){
+  const r=await apiPost('sync',{employees:state.employees,absences:state.absences,lates:state.lates,signatures:state.signatures,settings:state.settings});
+  if(r&&r.ok)console.log('تمت المزامنة مع Google Sheets');
+}
+async function loadFromSheets(){
+  const r=await apiGet('all'); if(!r||!r.ok||!r.data)return;
+  const d=r.data;
+  const merge=(a,b)=>{const m=new Map((a||[]).map(x=>[String(x.id),x]));(b||[]).forEach(x=>m.set(String(x.id),x));return [...m.values()];};
+  if((d.employees||[]).length||(d.absences||[]).length||(d.lates||[]).length||Object.keys(d.settings||{}).length){
+    state.employees=merge(state.employees,d.employees);
+    state.absences=merge(state.absences,d.absences);
+    state.lates=merge(state.lates,d.lates);
+    state.settings=Object.assign({},state.settings,d.settings||{});
+    Object.keys(d.signatures||{}).forEach(k=>state.signatures[k]=d.signatures[k]);
+    localStorage.setItem(KEY,JSON.stringify(state));refresh();
+  }
+  await syncToSheets();
+}
 function toast(s){const t=document.getElementById('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2200)}
 function nav(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active','printing'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));document.getElementById('pageTitle').textContent={home:'لوحة المتابعة',absence:'رصد الغياب',late:'رصد التأخير',employees:'إدارة الموظفات',reports:'التقارير',settings:'الإدارة والإعدادات',sign:'توقيع الموظفة'}[id]}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>nav(b.dataset.go));
@@ -130,5 +162,5 @@ function setupSignature(){const c=document.getElementById('sigCanvas'),ctx=c.get
 function clearSignature(){const c=document.getElementById('sigCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);document.getElementById('sigStatus').textContent='⚠ بانتظار توقيع الموظفة'}
 function saveSignature(){const id=document.getElementById('sigEmp').value;if(!id)return toast('اختر الموظفة');const c=document.getElementById('sigCanvas');const data=c.toDataURL('image/png');state.signatures[id]={data,type:document.getElementById('sigType').value,at:new Date().toISOString()};save();document.getElementById('sigStatus').textContent='✓ تم الاطلاع والتوقيع — '+new Date().toLocaleString('ar-SA');toast('تم حفظ التوقيع')}
 function tick(){const d=new Date();document.getElementById('clock').innerHTML=fmtHijri(d)+'<br><b>'+new Intl.DateTimeFormat('ar-SA',{dateStyle:'full',timeStyle:'short'}).format(d)+'</b>'}
-fillJobs();refresh();addAbsenceItem();setupSignature();tick();setInterval(tick,30000);
+fillJobs();refresh();addAbsenceItem();setupSignature();tick();setInterval(tick,30000);setTimeout(loadFromSheets,500);
 </script></body></html>
