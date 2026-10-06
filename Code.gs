@@ -6,7 +6,8 @@ const CONFIG = {
     absences: 'Absences',
     lateness: 'Lateness',
     signatures: 'Signatures',
-    settings: 'Settings'
+    settings: 'Settings',
+    actions: 'Actions'
   }
 };
 
@@ -76,7 +77,6 @@ function setupSheets(){
     Lateness:['id','empId','name','job','date','arrival','start','minutes','reason','note','created'],
     Signatures:['id','empId','name','type','data','at','createdAt'],
     Settings:['key','value','updatedAt'],
-    Actions:['id','empId','name','job','date','type','text','note','created'],
     Actions:['id','empId','name','job','date','type','text','note','created']
   };
   Object.keys(headers).forEach(k=>{const sh=getOrCreate_(ss,k);ensureHeaders_(sh,headers[k]);});
