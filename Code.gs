@@ -109,10 +109,19 @@ function deleteById_(ss,name,id){
   const sh=getOrCreate_(ss,name);
   const headers=getHeaders_(sh);
   const keyField=name==='Settings'?'key':'id';
-  const row=findRow_(sh,keyField,String(id),headers);
-  if(!row)return false;
-  sh.deleteRow(row);
-  return true;
+  if(!headers.length || sh.getLastRow()<2)return false;
+  const col=headers.indexOf(keyField)+1;
+  if(col<1)return false;
+  const wanted=String(id).trim();
+  const values=sh.getRange(2,col,sh.getLastRow()-1,1).getDisplayValues();
+  for(let i=0;i<values.length;i++){
+    if(String(values[i][0]).trim()===wanted){
+      sh.deleteRow(i+2);
+      SpreadsheetApp.flush();
+      return true;
+    }
+  }
+  return false;
 }
 function upsertOne_(ss,name,record){
   if(!record||(!record.id&&!record.key))return;
