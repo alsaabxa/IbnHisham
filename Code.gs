@@ -34,13 +34,21 @@ function doPost(e){
     const action=body.action||'save';
     if(action==='sync'){
       const d=body.data||{};
+      const delSuccess=[],delFailed=[];
+      (d.deletes||[]).forEach(x=>{
+        const type=String(x.type||''),id=String(x.id||'');
+        const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
+        if(!sheetName||!id){delFailed.push(id||'');return;}
+        try{if(deleteById_(ss,sheetName,id))delSuccess.push(id);else delFailed.push(id);}catch(err){delFailed.push(id);}
+      });
       return json_({ok:true,synced:true,result:{
         employees:upsertMany_(ss,CONFIG.sheets.employees,d.employees||[]),
         absences:upsertMany_(ss,CONFIG.sheets.absences,d.absences||[]),
         lateness:upsertMany_(ss,CONFIG.sheets.lateness,d.lates||d.lateness||[]),
         signatures:upsertSignatures_(ss,d.signatures||{}),
         settings:upsertSettings_(ss,d.settings||{}),
-        actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[])
+        actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[]),
+        deletes:{successIds:delSuccess,failedIds:delFailed}
       }});
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
@@ -133,9 +141,12 @@ function deleteById_(ss,name,id){
   const col=headers.indexOf(keyField)+1;
   if(col<1)return false;
   const wanted=String(id).trim();
-  const values=sh.getRange(2,col,sh.getLastRow()-1,1).getDisplayValues();
+  const values=sh.getRange(2,col,sh.getLastRow()-1,1).getValues();
+  const display=sh.getRange(2,col,sh.getLastRow()-1,1).getDisplayValues();
   for(let i=0;i<values.length;i++){
-    if(String(values[i][0]).trim()===wanted){
+    const raw=values[i][0]===null||values[i][0]===undefined?'':String(values[i][0]).trim();
+    const shown=String(display[i][0]||'').trim();
+    if(raw===wanted || shown===wanted){
       sh.deleteRow(i+2);
       SpreadsheetApp.flush();
       return true;
