@@ -153,7 +153,7 @@ _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=getReportRange();
 const abs=state.absences.filter(x=>(!id||x.empId===id)&&recordInRange(x.from||x.reportDate,range.from,range.to));
 const late=state.lates.filter(x=>(!id||x.empId===id)&&recordInRange(x.date,range.from,range.to));
-const emp=id?state.employees.find(x=>x.id===id):null,title=sec==='absence'?'تقرير الغياب':'تقرير التأخير';
+const emp=id?state.employees.find(x=>x.id===id):null,title=type==='B'?(sec==='absence'?'سجل الغياب':'سجل التأخير'):(sec==='absence'?'تقرير الغياب':'تقرير التأخير');
 if(sec==='late'&&type==='A'){const es=emp?[emp]:state.employees.filter(e=>late.some(x=>x.empId===e.id));_g('report').innerHTML=es.length?es.map(e=>formA(e,range)).join(''):'<div class="empty">لا توجد سجلات تأخير في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
 const td=a=>'<tr>'+a.map(v=>'<td>'+(v===undefined||v===null?'':v)+'</td>').join('')+'</tr>';
 let rows='',headers='';
