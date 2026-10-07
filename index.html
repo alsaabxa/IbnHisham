@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-07-07';
+  const UI_VERSION='2026-10-07-08';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -422,7 +422,7 @@ function formAAbsence(e,range){
 const yr=hparts(range.from).y,months=monthsIn(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
 const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
 const tot={};G.forEach(g=>tot[g]=0);let all=0;
-state.absences.filter(x=>x.empId===e.id&&recordInRange(x.from||x.reportDate,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.from||x.reportDate);if(!d)return;const p=hparts(d),key=p.y+'-'+p.m;if(!data[key])return;const g=KEYS[x.type]||'other';data[key][g].push(x);const n=Number(x.days)||0;tot[g]+=n;all+=n});
+state.absences.filter(x=>{if(x.empId!==e.id)return false;const a=parseDateSafe(x.from||x.reportDate);if(!a)return false;const b=parseDateSafe(x.to)||a;return dateOnly(a)<=dateOnly(range.to)&&dateOnly(b)>=dateOnly(range.from)}).forEach(x=>{const a=parseDateSafe(x.from||x.reportDate);if(!a)return;const b=parseDateSafe(x.to)||a;let d=new Date(Math.max(dateOnly(a).getTime(),dateOnly(range.from).getTime()));const end=new Date(Math.min(dateOnly(b).getTime(),dateOnly(range.to).getTime()));let placed=false;while(d<=end&&d<=dateOnly(range.to)){const p=hparts(d),key=p.y+'-'+p.m;if(data[key]){const g=KEYS[x.type]||'other';if(!placed){data[key][g].push(x);placed=true}}d=addDays(d,1)}const g=KEYS[x.type]||'other';const n=Number(x.days)||0;tot[g]+=n;all+=n});
 const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6};
 const cols=[W.mo,W.cnt,W.dt,W.dt,W.rno,W.rdt,W.rpl,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.kind,W.rno,W.dt,W.dt,W.cnt,W.dt,W.dt,W.sg],sum=cols.reduce((a,b)=>a+b,0);
 const cg='<colgroup>'+cols.map(w=>'<col style="width:'+(w/sum*100).toFixed(2)+'%">').join('')+'</colgroup>';
