@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-07-01';
+  const UI_VERSION='2026-10-07-02';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -419,10 +419,10 @@ function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function shortHj(v){const d=parseDateSafe(v);if(!d)return '';const p=hparts(d);return ar(p.d)+'/'+ar(p.m)}
 function formAAbsence(e,range){
-const yr=hparts(range.from).y,KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
-const G=['sick','urgent','mat','care','other','noex'],data={};for(let m=1;m<=12;m++){data[m]={};G.forEach(g=>data[m][g]=[])}
+const yr=hparts(range.from).y,months=monthsIn(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
+const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
 const tot={};G.forEach(g=>tot[g]=0);let all=0;
-state.absences.filter(x=>x.empId===e.id&&recordInRange(x.from||x.reportDate,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.from||x.reportDate);if(d&&hparts(d).y!==yr)return;let m=HM.indexOf(x.month)+1;if(!m&&d)m=hparts(d).m;if(!m)return;const g=KEYS[x.type]||'other';data[m][g].push(x);const n=Number(x.days)||0;tot[g]+=n;all+=n});
+state.absences.filter(x=>x.empId===e.id&&recordInRange(x.from||x.reportDate,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.from||x.reportDate);if(!d)return;const p=hparts(d),key=p.y+'-'+p.m;if(!data[key])return;const g=KEYS[x.type]||'other';data[key][g].push(x);const n=Number(x.days)||0;tot[g]+=n;all+=n});
 const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6};
 const cols=[W.mo,W.cnt,W.dt,W.dt,W.rno,W.rdt,W.rpl,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.kind,W.rno,W.dt,W.dt,W.cnt,W.dt,W.dt,W.sg],sum=cols.reduce((a,b)=>a+b,0);
 const cg='<colgroup>'+cols.map(w=>'<col style="width:'+(w/sum*100).toFixed(2)+'%">').join('')+'</colgroup>';
@@ -436,28 +436,32 @@ const head='<thead><tr><th rowspan="3" class="mo">الشهر</th><th colspan="6"
 const L=(a,f)=>a.length?a.map(x=>'<div>'+f(x)+'</div>').join(''):'';
 const cell=(a,f,c)=>'<td'+(c?' class="'+c+'"':'')+'>'+L(a,f)+'</td>';
 let body='';
-for(let m=1;m<=12;m++){const D=data[m];body+='<tr><th class="mo">'+HM[m-1]+'</th>';
+months.forEach(([y,m])=>{const D=data[y+'-'+m],mn=HM[m-1]+(m===7?' '+ar(y):'');body+='<tr><th class="mo">'+mn+'</th>';
 const cnt=a=>cell(a,x=>x.days?ar(x.days):'','cnt'),fr=a=>cell(a,x=>shortHj(x.from)),to=a=>cell(a,x=>shortHj(x.to||x.from));
 body+=cnt(D.sick)+fr(D.sick)+to(D.sick)+cell(D.sick,x=>escH(x.ref))+cell(D.sick,x=>shortHj(x.reportDate))+cell(D.sick,x=>escH(x.place));
 ['urgent','mat','care'].forEach(g=>{body+=cnt(D[g])+fr(D[g])+to(D[g])});
 body+=cnt(D.other)+cell(D.other,x=>escH(x.note||x.place))+cell(D.other,x=>escH(x.ref))+fr(D.other)+to(D.other);
-body+=cnt(D.noex)+fr(D.noex)+to(D.noex)+'<td class="sg"></td></tr>'}
+body+=cnt(D.noex)+fr(D.noex)+to(D.noex)+'<td class="sg"></td></tr>'});
 const tc=(g,n)=>'<td class="cnt">'+(tot[g]?ar(tot[g]):'—')+'</td><td colspan="'+(n-1)+'" class="tz"></td>';
 body+='<tr class="tot"><th class="mo">المجموع</th>'+tc('sick',6)+tc('urgent',3)+tc('mat',3)+tc('care',3)+tc('other',5)+tc('noex',3)+'<td></td></tr>';
 const sumLine='<div class="xsum">إجمالي أيام الغياب: <b>'+ar(all)+'</b> يوم'+(tot.noex?' — منها بدون عذر: <b>'+ar(tot.noex)+'</b>':'')+'</div>';
 return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">حصر الغياب — العام الهجري '+ar(yr)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
+
 function formA(e,range){
-const yr=hparts(range.from).y,cells={},tot=Array(13).fill(0);
-state.lates.filter(x=>x.empId===e.id&&recordInRange(x.date,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y!==yr)return;const k=p.m+'-'+p.d,c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.m]+=Number(x.minutes)||0});
+const yr=hparts(range.from).y,months=monthsIn(range.from,range.to),cells={},tot={};
+months.forEach(([y,m])=>tot[y+'-'+m]=0);
+state.lates.filter(x=>x.empId===e.id&&recordInRange(x.date,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
 let h1='<th rowspan="2" class="dc">التاريخ</th>',h2='',b='';
-HM.forEach(n=>{h1+='<th colspan="2">'+n+'</th>';h2+='<th class="g">حضور</th><th class="r">التأخر</th>'});
-const off=offMap(yr);for(let d=1;d<=30;d++){b+='<tr'+(d%5===0?' class="b5"':'')+'><th class="dc">'+ar(d)+'</th>';for(let m=1;m<=12;m++){const c=cells[m+'-'+d],o=off[m+'-'+d]&&!(c&&(c.arr||c.min))?' class="off"':'';b+='<td class="tm'+(o?' off':'')+'">'+(c&&c.arr?fmtT(c.arr):'')+'</td><td'+o+'>'+(c&&c.min?ar(c.min):'')+'</td>'}b+='</tr>'}
+months.forEach(([y,m])=>{const mn=HM[m-1]+(m===7?' '+ar(y):'');h1+='<th colspan="2">'+mn+'</th>';h2+='<th class="g">حضور</th><th class="r">التأخر</th>'});
+for(let d=1;d<=30;d++){b+='<tr'+(d%5===0?' class="b5"':'')+'><th class="dc">'+ar(d)+'</th>';months.forEach(([y,m])=>{const c=cells[y+'-'+m+'-'+d],gd=h2g(y,m,d),off=!gd||gd.getDay()===5||gd.getDay()===6;const cls=off&&!(c&&(c.arr||c.min))?' class="off"':'';b+='<td class="tm'+(off?' off':'')+'">'+(c&&c.arr?fmtT(c.arr):'')+'</td><td'+cls+'>'+(c&&c.min?ar(c.min):'')+'</td>'});b+='</tr>'}
 let run=0,r1='<th class="dc">المجموع</th>',r2='<th class="dc">المرحل</th>',r3='<th class="dc">توقيع المعلمة</th>';
-for(let m=1;m<=12;m++){run+=tot[m];r1+='<td colspan="2">'+(tot[m]?ar(tot[m]):'—')+'</td>';r2+='<td colspan="2">'+(run?ar(run):'—')+'</td>';r3+='<td colspan="2"></td>'}
+months.forEach(([y,m])=>{const v=tot[y+'-'+m]||0;run+=v;r1+='<td colspan="2">'+(v?ar(v):'—')+'</td>';r2+='<td colspan="2">'+(run?ar(run):'—')+'</td>';r3+='<td colspan="2"></td>'});
 const acts=[[60,'تنبيه شفوي'],[120,'تعهد خطي'],[180,'تعهد خطي ١'],[360,'لفت نظر ٢'],[420,'الرفع لشؤون الموظفين رفع يوم']];
 const at=a=>'<table><thead><tr><th>الإجراء المتخذ مع الموظفة</th><th>توقيع الموظفة</th></tr></thead><tbody>'+a.map(x=>'<tr class="'+(run>=x[0]?'hit':'')+'"><td>'+ar(x[0])+' دقيقة '+x[1]+'</td><td></td></tr>').join('')+'</tbody></table>';
 return '<div class="fa">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+e.name+'</b></span><span>الوظيفة :- <b>'+e.job+'</b></span></div><div class="rper">العام الهجري '+ar(yr)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="ft"><thead><tr>'+h1+'</tr><tr>'+h2+'</tr></thead><tbody>'+b+'<tr class="b5">'+r1+'</tr><tr>'+r2+'</tr><tr>'+r3+'</tr></tbody></table></div><div class="acts">'+at(acts.slice(0,3))+at(acts.slice(3))+'</div>'+repFoot(e)+'</div>'}
-function annualRange(r){const y=hparts(r.from).y,a=h2g(y,1,1),b=h2g(y,12,30)||h2g(y,12,29);return a&&b?{from:a,to:b,label:'تقرير سنوي'}:r}
+
+function annualRange(r){const y=hparts(r.from).y,a=h2g(y,7,1),b=h2g(y+1,7,30)||h2g(y+1,7,29);return a&&b?{from:a,to:b,label:'تقرير سنوي من رجب إلى رجب'}:r}
+
 function updRepHint(){const h=document.getElementById('repHintA');if(h)h.style.display=_g('repType').value==='A'?'block':'none'}
 function latestReportTime(empId,sec,arr){let max=0;arr.forEach(x=>{if(String(x.empId)!==String(empId))return;const vals=sec==='absence'?[x.from,x.to,x.reportDate,x.date,x.created]:[x.date,x.reportDate,x.created];vals.forEach(v=>{const d=parseDateSafe(v);if(d)max=Math.max(max,d.getTime())})});return max}
 function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b)=>{const db=latestReportTime(b.id,sec,arr),da=latestReportTime(a.id,sec,arr);if(db!==da)return db-da;return String(a.name||'').localeCompare(String(b.name||''),'ar')})}
