@@ -16,7 +16,7 @@
 .rhead{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .rtxt{display:flex;flex-direction:column;gap:2px;font-size:13px;font-weight:700;line-height:1.6;text-align:right}.rtxt b{font-size:14px}
 .rlogo{height:64px;width:auto}
-.rfoot{display:flex;justify-content:space-between;margin-top:40px;font-size:14px;font-weight:800;gap:20px}.rfoot span{display:block;font-size:12px;font-weight:600;color:#555}
+.rfoot{display:flex;justify-content:space-between;direction:rtl;margin-top:40px;font-size:14px;font-weight:800;gap:20px}.rfoot>div{display:flex;flex-direction:column;align-items:center;min-width:220px}.rfoot b{font-size:14px}.rfoot span{display:block;font-size:12px;font-weight:600;color:#555}
 .dcell{display:flex;align-items:center;gap:8px}.dcell .dd{display:flex;flex-direction:column;line-height:1.5}.dcell b{font-size:12px}.dcell small{font-size:10px;color:#667}.dcell em{font-style:normal;font-size:11px;font-weight:700;color:var(--teal)}
 .rnow{margin-top:6px}
 .nbox{border:1.5px dashed #444;border-radius:8px;padding:8px 14px;margin:10px 0;font-size:14px;display:flex;gap:30px}
@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-07-04';
+  const UI_VERSION='2026-10-07-05';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -413,7 +413,7 @@ function mgr(){const t=S(),e=t.managerId&&state.employees.find(x=>String(x.id)==
 function fillSettings(){const t=S(),g=_g;g('settingStart').value=t.start||'07:00';g('settingStartSummer').value=t.startSummer||t.start||'07:00';g('seasonMode').value=t.seasonMode||'auto';g('summerFrom').value=t.summerFrom||'';g('summerTo').value=t.summerTo||'';g('schoolName').value=schoolName();g('deptName').value=dept();g('managerName').value=mgr();g('settingWarn1').value=t.warn1||30;g('settingWarn2').value=t.warn2||60}
 function initRepDefaults(){_g('repSection').value='late';_g('repType').value='A'}
 function repHead(){return '<div class="rhead"><div class="rtxt"><b>وزارة التعليم</b><span>'+dept()+'</span><span>'+schoolName()+'</span></div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div>'}
-function repFoot(e){return '<div class="rfoot"><div>'+(e?'<span>'+e.job+'</span>الأستاذة / '+e.name:'<span>الموظفة</span>..............................')+'</div><div><span>مديرة المدرسة</span>الأستاذة / '+mgr()+'</div></div>'}
+function repFoot(e){return '<div class="rfoot"><div><span>الموظفة</span><b>صفية عسيري</b><span>التوقيع: ................................</span></div><div><span>مديرة المدرسة</span><b>التوقيع: ................................</b></div></div>'}
 const _offCache={};
 function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1;m<=12;m++)for(let d=1;d<=30;d++){const g=h2g(yr,m,d);o[m+'-'+d]=!g||g.getDay()===5||g.getDay()===6}return _offCache[yr]=o}
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
