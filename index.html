@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-07-03';
+  const UI_VERSION='2026-10-07-04';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -398,7 +398,7 @@ function setTP(id,v){const h=_g(id);if(!h)return;const el=h.parentElement,q=n=>e
 /* ===== حدود الإنذارات والإجراء الآلي ===== */
 function warnLim(){return[+S().warn1||30,+S().warn2||60]}
 function actName(t){const[a,b]=warnLim();return t>=b?'إنذار خطي (تجاوز '+ar(b)+' دقيقة)':t>=a?'إنذار خطي':t>0?'إنذار شفهي':''}
-function monthsIn(a,b){const out=[],pa=hparts(a),pb=hparts(b);let y=pa.y,m=pa.m,g=0;while((y<pb.y||(y===pb.y&&m<=pb.m))&&g++<14){if(m!==1&&m!==2)out.push([y,m]);m++;if(m>12){m=1;y++}}return out}
+function monthsIn(a,b){const out=[],pa=hparts(a),pb=hparts(b);let y=pa.y,m=pa.m,g=0;while((y<pb.y||(y===pb.y&&m<=pb.m))&&g++<14){if(m!==2)out.push([y,m]);m++;if(m>12){m=1;y++}}return out}
 function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);return a&&b?Math.round((b-a)/864e5):30}
 function monthRecs(e,y,m){const L={},A={};state.lates.forEach(x=>{if(x.empId!==e.id)return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});state.absences.forEach(x=>{if(x.empId!==e.id)return;const a=parseDateSafe(x.from);if(!a)return;const b=parseDateSafe(x.to)||a;let d=addDays(a,0),n=0;while(dateOnly(d)<=dateOnly(b)&&n++<400){const p=hparts(d);if(p.y===y&&p.m===m)A[p.d]=x;d=addDays(d,1)}});return{L,A}}
 function bDateCell(d,i){return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hjStr(d):'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
