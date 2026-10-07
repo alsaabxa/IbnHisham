@@ -131,14 +131,38 @@ async function apiPost(action,data){const url=(state.settings&&state.settings.ap
 async function deleteFromSheets(type,id){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return false;const r=await apiPost('delete',{type:type,id:String(id)});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر المزامنة مع Google Sheets أثناء الحذف');return false}
 async function deleteAllFromSheets(type){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return true;const r=await apiPost('deleteAll',{type:type});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر حذف السجلات من Google Sheets');return false}
 let syncTimer=null;
+let syncBusy=false;
+let syncRetryTimer=null;
+function queueSheetSync(delay=250){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{syncToSheets();},delay);
+}
 function fitReportPages(){const rep=document.getElementById('report');if(!rep)return;const units=[...rep.querySelectorAll('.fa,.fb,.fx')],targets=units.length?units:[rep],mm=v=>v*96/25.4,land=!!rep.querySelector('.fx'),availH=mm((land?210:297)-16)-8,availW=mm((land?297:210)-16);targets.forEach(u=>{u.style.zoom=''});targets.forEach(u=>{const h=u.scrollHeight||1,w=u.scrollWidth||1,k=Math.min(1,availH/h,availW/w);if(k<1)u.style.zoom=Math.max(0.5,k*0.98).toFixed(3)})}
 function applyPrintMode(){const cb=document.getElementById('onePagePrint');if(cb&&cb.checked&&document.getElementById('report')){document.body.classList.add('one-page-print');document.body.classList.toggle('one-page-land',!!document.querySelector('#report .fx'));fitReportPages()}}
 function clearPrintMode(){document.body.classList.remove('one-page-print','one-page-land');document.querySelectorAll('#report,#report .fa,#report .fb,#report .fx').forEach(u=>{u.style.zoom=''})}
 window.addEventListener('beforeprint',applyPrintMode);window.addEventListener('afterprint',clearPrintMode);
 function printReport(){applyPrintMode();window.print();setTimeout(clearPrintMode,2500)}
 function printSinglePage(){printReport()}
-function save(){localStorage.setItem(KEY,JSON.stringify(state));refresh();clearTimeout(syncTimer);syncTimer=setTimeout(syncToSheets,250)}
-async function syncToSheets(){const r=await apiPost('sync',{employees:state.employees,absences:state.absences,lates:state.lates,signatures:state.signatures,settings:state.settings,actions:state.actions,deletes:state.pendingDeletes||[]});if(r&&r.ok){const done=((r.result&&r.result.deletes&&r.result.deletes.successIds)||[]).map(String);if(done.length){state.pendingDeletes=(state.pendingDeletes||[]).filter(x=>!done.includes(String(x.id)));localStorage.setItem(KEY,JSON.stringify(state));}console.log('تمت المزامنة مع Google Sheets')}else{console.warn('sync failed',r);if(r&&r.error)toast(r.error)}return r}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));refresh();queueSheetSync()}
+async function syncToSheets(){
+  if(syncBusy)return;
+  syncBusy=true;
+  clearTimeout(syncRetryTimer);
+  const r=await apiPost('sync',{employees:state.employees,absences:state.absences,lates:state.lates,signatures:state.signatures,settings:state.settings,actions:state.actions,deletes:state.pendingDeletes||[]});
+  syncBusy=false;
+  if(r&&r.ok){
+    const done=((r.result&&r.result.deletes&&r.result.deletes.successIds)||[]).map(String);
+    if(done.length){
+      state.pendingDeletes=(state.pendingDeletes||[]).filter(x=>!done.includes(String(x.id)));
+      localStorage.setItem(KEY,JSON.stringify(state));
+    }
+    console.log('تمت المزامنة مع Google Sheets');
+  }else{
+    console.warn('sync failed',r);
+    syncRetryTimer=setTimeout(()=>syncToSheets(),3000);
+  }
+  return r;
+}
 async function loadFromSheets(){const r=await apiGet('all');if(!r||!r.ok||!r.data)return;const d=r.data;const pending=state.pendingDeletes||[];const blocked={absence:new Set(),late:new Set(),lateness:new Set(),action:new Set(),employee:new Set()};pending.forEach(x=>{if(blocked[x.type])blocked[x.type].add(String(x.id))});const filter=(arr,type)=>Array.isArray(arr)?arr.filter(x=>!blocked[type].has(String(x.id))):[];const merge=(a,b)=>{const m=new Map((a||[]).map(x=>[String(x.id),x]));(b||[]).forEach(x=>m.set(String(x.id),x));return [...m.values()]};state.employees=merge(state.employees.filter(x=>!blocked.employee.has(String(x.id))),filter(d.employees,'employee'));state.absences=merge(state.absences,filter(d.absences,'absence'));state.lates=merge(state.lates,filter(d.lates||d.lateness,'late'));state.actions=merge(state.actions,filter(d.actions||[],'action'));{const rs=d.settings||{},lu=Number(state.settings.settingsUpdated)||0,ru=Number(rs.settingsUpdated)||0,keepUrl=state.settings.apiUrl;if(ru>lu||(!lu&&ru===0))state.settings=Object.assign({},state.settings,rs);if(keepUrl)state.settings.apiUrl=keepUrl}Object.keys(d.signatures||{}).forEach(k=>state.signatures[k]=d.signatures[k]);localStorage.setItem(KEY,JSON.stringify(state));refresh();if(pending.length)await syncToSheets()}
 
 function toast(s){const t=document.getElementById('toast');t.textContent=s;t.style.display='block';setTimeout(()=>t.style.display='none',2200)}
@@ -181,19 +205,16 @@ if(remote){state.pendingDeletes=state.pendingDeletes.filter(x=>!(x.type===type&&
 else toast('تم الحذف بنجاح');
 renderRecordManagement();
 }
-async function deleteAllRecords(type){
+function deleteAllRecords(type){
 const label=type==='absence'?'جميع سجلات الغياب':'جميع سجلات التأخير';
 const password=prompt('أدخل الرقم السري لحذف '+label+':');
 if(password!=='1234')return toast('الرقم السري غير صحيح');
 if(!confirm('تأكيد حذف '+label+' نهائيًا؟'))return;
-const doomed=(type==='absence'?state.absences:state.lates).map(x=>({type:type==='absence'?'absence':'late',id:String(x.id)}));state.pendingDeletes.push(...doomed);
+const doomed=(type==='absence'?state.absences:state.lates).map(x=>({type:type==='absence'?'absence':'late',id:String(x.id)}));
+state.pendingDeletes.push(...doomed);
 if(type==='absence')state.absences=[];else state.lates=[];
-localStorage.setItem(KEY,JSON.stringify(state));
-refresh();
+save();
 toast('تم الحذف بنجاح');
-const remote=await deleteAllFromSheets(type);
-if(remote){state.pendingDeletes=state.pendingDeletes.filter(x=>x.type!==(type==='absence'?'absence':'late'));localStorage.setItem(KEY,JSON.stringify(state));toast('تم الحذف بنجاح');}
-else toast('تم الحذف بنجاح');
 renderRecordManagement();
 }
 function renderRecordManagement(){
@@ -219,7 +240,7 @@ function updLateAction(){const el=_g('lateAction');if(!el)return;const eid=_g('l
 function calcLate(){const a=_g('arrival').value,l=_g('lateDate'),iso=(l&&l.value)||toInputDate(new Date()),s=startFor(iso);if(!a||!s){_g('lateMinutes').value='';if(typeof updLateAction==='function')updLateAction();return}const [ah,am]=a.split(':').map(Number),[sh,sm]=s.split(':').map(Number);_g('lateMinutes').value=Math.max(0,(ah*60+am)-(sh*60+sm));if(typeof updLateAction==='function')updLateAction();const i=_g('seasonInfo');if(i)i.textContent='التوقيت المعتمد: '+(seasonOf(iso)==='summer'?'صيفي':'شتوي')+' — بداية الدوام '+fmtT(s)}
 function saveLate(){const emp=_g('lateEmp').value,e=state.employees.find(x=>x.id===emp);if(!e)return toast('اختر الموظفة');if(!_g('lateDate').value||!_g('arrival').value)return toast('أكمل التاريخ ووقت الحضور');calcLate();if(!(+_g('lateMinutes').value>0))return toast('وقت الحضور لا يتجاوز بداية الدوام — لا يوجد تأخير للرصد');if(state.lates.some(x=>x.empId===emp&&x.date===_g('lateDate').value)&&!confirm('يوجد رصد تأخير لنفس الموظفة في هذا التاريخ. هل تريد إضافة سجل آخر؟'))return;state.lates.push({id:crypto.randomUUID(),empId:emp,name:e.name,job:e.job,date:_g('lateDate').value,arrival:_g('arrival').value,start:startFor(_g('lateDate').value),minutes:+_g('lateMinutes').value||0,reason:_g('lateReason').value,note:_g('lateNote').value,created:new Date().toISOString()});const h=hparts(parseDateSafe(_g('lateDate').value)||new Date()),t=state.lates.filter(x=>x.empId===emp).reduce((s,x)=>{const d=parseDateSafe(x.date),p=d&&hparts(d);return p&&p.y===h.y&&p.m===h.m?s+(Number(x.minutes)||0):s},0);save();toast('تم الحفظ بنجاح')}
 function addLateAnother(){const n=state.lates.length;saveLate();if(state.lates.length===n)return;const a=_g('arrival');if(a)a.value='';_g('lateMinutes').value='';if(typeof updLateAction==='function')updLateAction()}
-async function saveSettings(){const t=state.settings,g=_g;t.apiUrl=t.apiUrl||'';t.start=g('settingStart').value||'07:00';t.startSummer=g('settingStartSummer').value||t.start;t.seasonMode=g('seasonMode').value;t.summerFrom=g('summerFrom').value;t.summerTo=g('summerTo').value;t.warn1=Math.max(1,+g('settingWarn1').value||30);t.warn2=Math.max(t.warn1,+g('settingWarn2').value||60);t.settingsUpdated=Date.now();t.school=g('schoolName').value.trim()||'مدرسة ابن هشام للطفولة المبكرة';t.dept=g('deptName').value.trim()||'إدارة تعليم مكة';t.manager=g('managerName').value.trim()||'مرفت خليل سمندر';localStorage.setItem(KEY,JSON.stringify(state));refresh();const st=g('settingsStatus');if(st)st.textContent='جاري حفظ الإعدادات...';clearTimeout(syncTimer);const r=await syncToSheets();if(st)st.textContent=r&&r.ok?'✓ تم حفظ الإعدادات محليًا وفي Google Sheets':'⚠ حُفظت محليًا فقط — '+((r&&r.error)||'تعذر المزامنة مع Google Sheets');toast(r&&r.ok?'تم حفظ الإعدادات في Google Sheets':'حُفظت محليًا فقط — لم تصل لـ Google Sheets')}
+function saveSettings(){const t=state.settings,g=_g;t.apiUrl=t.apiUrl||'';t.start=g('settingStart').value||'07:00';t.startSummer=g('settingStartSummer').value||t.start;t.seasonMode=g('seasonMode').value;t.summerFrom=g('summerFrom').value;t.summerTo=g('summerTo').value;t.warn1=Math.max(1,+g('settingWarn1').value||30);t.warn2=Math.max(t.warn1,+g('settingWarn2').value||60);t.settingsUpdated=Date.now();t.school=g('schoolName').value.trim()||'مدرسة ابن هشام للطفولة المبكرة';t.dept=g('deptName').value.trim()||'إدارة تعليم مكة';t.manager=g('managerName').value.trim()||'مرفت خليل سمندر';localStorage.setItem(KEY,JSON.stringify(state));refresh();const st=g('settingsStatus');if(st)st.textContent='✓ تم الحفظ بنجاح';queueSheetSync(0);toast('تم الحفظ بنجاح')}
 
 function parseDateSafe(v){if(!v)return null;const d=new Date(String(v).length===10?String(v)+'T12:00:00':v);return isNaN(d.getTime())?null:d}
 function dateOnly(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
@@ -345,7 +366,7 @@ function setupSignature(){const c=document.getElementById('sigCanvas'),ctx=c.get
 function clearSignature(){const c=document.getElementById('sigCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);document.getElementById('sigStatus').textContent='⚠ بانتظار توقيع الموظفة'}
 function saveAction(){const empId=_g('actionEmp').value,e=state.employees.find(x=>x.id===empId);if(!e)return toast('اختر الموظفة');const date=_g('actionDate').value;if(!date)return toast('اختر التاريخ');const action={id:crypto.randomUUID(),empId:empId,name:e.name,job:e.job,date:date,type:_g('actionType').value,text:_g('actionText').value.trim(),note:_g('actionNote').value.trim(),created:new Date().toISOString()};if(!action.text)return toast('اكتب الإجراء المتخذ');state.actions.push(action);save();_g('actionText').value='';_g('actionNote').value='';renderActions();toast('تم حفظ الإجراء المتخذ')}
 function renderActions(){const el=_g('actionsTable');if(!el)return;if(!state.actions.length){el.innerHTML='<div class="empty">لا توجد إجراءات مسجلة.</div>';return}el.innerHTML='<table><thead><tr><th>الموظفة</th><th>التاريخ</th><th>نوع الإجراء</th><th>الإجراء</th><th>ملاحظات</th><th>حذف</th></tr></thead><tbody>'+state.actions.map(x=>'<tr><td>'+x.name+'</td><td>'+dateCell(x.date)+'</td><td>'+x.type+'</td><td>'+x.text+'</td><td>'+x.note+'</td><td><button class="btn danger" onclick="deleteAction(\''+x.id+'\')">حذف</button></td></tr>').join('')+'</tbody></table>'}
-async function deleteAction(id){const p=prompt('أدخل الرقم السري لحذف الإجراء:');if(p!=='1234')return toast('الرقم السري غير صحيح');if(!confirm('تأكيد حذف الإجراء؟'))return;const remote=await deleteFromSheets('action',id);if(!remote){toast('تعذر الحذف من Google Sheets');return}state.actions=state.actions.filter(x=>String(x.id)!==String(id));save();renderActions();toast('تم حذف الإجراء')}
+function deleteAction(id){const p=prompt('أدخل الرقم السري لحذف الإجراء:');if(p!=='1234')return toast('الرقم السري غير صحيح');if(!confirm('تأكيد حذف الإجراء؟'))return;state.actions=state.actions.filter(x=>String(x.id)!==String(id));state.pendingDeletes.push({type:'action',id:String(id)});save();renderActions();toast('تم الحذف بنجاح')}
 function saveSignature(){const id=document.getElementById('sigEmp').value;if(!id)return toast('اختر الموظفة');const c=document.getElementById('sigCanvas'),data=c.toDataURL('image/png');state.signatures[id]={data:data,type:document.getElementById('sigType').value,at:new Date().toISOString()};save();document.getElementById('sigStatus').textContent='✓ تم الاطلاع والتوقيع — '+new Date().toLocaleString('ar-SA');toast('تم حفظ التوقيع')}
 function tick(){const d=new Date();document.getElementById('clock').innerHTML=fmtHijri(d)+'<br><b>'+new Intl.DateTimeFormat('ar-SA',{dateStyle:'full',timeStyle:'short'}).format(d)+'</b>'}
 fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);setTimeout(loadFromSheets,500);
