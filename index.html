@@ -420,34 +420,21 @@ function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function shortHj(v){const d=parseDateSafe(v);if(!d)return '';const p=hparts(d);return ar(p.d)+'/'+ar(p.m)}
 function formAAbsence(e,range){
-const yr=hparts(range.from).y,months=monthsIn(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
-const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
+const KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'},G=['sick','urgent','mat','care','other','noex'];
+const records=state.absences.filter(x=>String(x.empId)===String(e.id)&&absenceOverlapsRange(x,range.from,range.to));
+const months=monthsIn(range.from,range.to),data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
 const tot={};G.forEach(g=>tot[g]=0);let all=0;
-const seen={};state.absences.filter(x=>String(x.empId)===String(e.id)&&absenceOverlapsRange(x,range.from,range.to)).forEach(x=>{const keyId=String(x.id||[x.empId,x.from,x.to,x.type,x.days,x.ref,x.reportDate,x.place,x.note,x.created].join('|'));if(seen[keyId])return;seen[keyId]=1;const g=KEYS[x.type]||'other',n=Number(x.days)||0;tot[g]+=n;all+=n;const a=parseDateSafe(x.from||x.reportDate),b=parseDateSafe(x.to||x.from||x.reportDate)||a;if(!a)return;months.forEach(([y,m])=>{const ms=h2g(y,m,1),me=m===12?h2g(y+1,1,1):h2g(y,m+1,1);if(!ms||!me)return;const mend=addDays(me,-1);if(a<=mend&&b>=ms){const key=y+'-'+m;if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')&&String(z.from)===String(x.from)&&String(z.to)===String(x.to)))data[key][g].push(x)}})});
-const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6};
-const cols=[W.mo,W.cnt,W.dt,W.dt,W.rno,W.rdt,W.rpl,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.kind,W.rno,W.dt,W.dt,W.cnt,W.dt,W.dt,W.sg],sum=cols.reduce((a,b)=>a+b,0);
+records.forEach(x=>{const g=KEYS[x.type]||'other',a=parseDateSafe(x.from||x.reportDate),b=parseDateSafe(x.to||x.from||x.reportDate)||a;if(!a)return;const n=Number(x.days)||Math.max(1,Math.round((dateOnly(b)-dateOnly(a))/86400000)+1);tot[g]+=n;all+=n;months.forEach(([y,m])=>{const ms=h2g(y,m,1),me=m===12?h2g(y+1,1,1):h2g(y,m+1,1),mend=me?addDays(me,-1):null;if(ms&&mend&&a<=mend&&b>=ms){const key=y+'-'+m;if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')))data[key][g].push(x)}})});
+const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6},cols=[W.mo,W.cnt,W.dt,W.dt,W.rno,W.rdt,W.rpl,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.kind,W.rno,W.dt,W.dt,W.cnt,W.dt,W.dt,W.sg],sum=cols.reduce((a,b)=>a+b,0);
 const cg='<colgroup>'+cols.map(w=>'<col style="width:'+(w/sum*100).toFixed(2)+'%">').join('')+'</colgroup>';
 const ft=['من','إلى'].map(t=>'<th class="g2">'+t+'</th>').join('');
-const head='<thead><tr><th rowspan="3" class="mo">الشهر</th><th colspan="6" class="g1">إجازة مرضية</th><th colspan="3" class="g1">إجازة اضطرارية</th><th colspan="3" class="g1">إجازة أمومة</th><th colspan="3" class="g1">إجازة رعاية مولود</th><th colspan="5" class="g1">إجازة أخرى</th><th colspan="3" class="g1">بدون عذر</th><th rowspan="3" class="g1">توقيع<br>الموظفة</th></tr>'
-+'<tr><th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th><th colspan="3" class="y">التقرير الطبي</th>'
-+['urgent','mat','care'].map(()=>'<th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th>').join('')
-+'<th rowspan="2" class="y vt">العدد</th><th rowspan="2" class="g1">نوعها</th><th class="y">التقرير الطبي</th><th colspan="2" class="y">التاريخ</th>'
-+'<th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th></tr>'
-+'<tr>'+ft+'<th class="g2">رقم</th><th class="g2">تاريخ</th><th class="g2">مكان</th>'+ft+ft+ft+'<th class="g2">الرقم</th>'+ft+ft+'</tr></thead>';
+const head='<thead><tr><th rowspan="3" class="mo">الشهر</th><th colspan="6" class="g1">إجازة مرضية</th><th colspan="3" class="g1">إجازة اضطرارية</th><th colspan="3" class="g1">إجازة أمومة</th><th colspan="3" class="g1">إجازة رعاية مولود</th><th colspan="5" class="g1">إجازة أخرى</th><th colspan="3" class="g1">بدون عذر</th><th rowspan="3" class="g1">توقيع<br>الموظفة</th></tr>'+'<tr><th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th><th colspan="3" class="y">التقرير الطبي</th>'+['urgent','mat','care'].map(()=>'<th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th>').join('')+'<th rowspan="2" class="y vt">العدد</th><th rowspan="2" class="g1">نوعها</th><th class="y">التقرير الطبي</th><th colspan="2" class="y">التاريخ</th>'+'<th rowspan="2" class="y vt">العدد</th><th colspan="2" class="y">التاريخ</th></tr>'+'<tr>'+ft+'<th class="g2">رقم</th><th class="g2">تاريخ</th><th class="g2">مكان</th>'+ft+ft+ft+'<th class="g2">الرقم</th>'+ft+ft+'</tr></thead>';
 const L=(a,f)=>a.length?a.map(x=>'<div>'+f(x)+'</div>').join(''):'';
-const cell=(a,f,c)=>'<td'+(c?' class="'+c+'"':'')+'>'+L(a,f)+'</td>';
-let body='';
-months.forEach(([y,m])=>{const D=data[y+'-'+m],mn=HM[m-1]+(m===7?' '+ar(y):'');body+='<tr><th class="mo">'+mn+'</th>';
-const cnt=a=>cell(a,x=>x.days?ar(x.days):'','cnt'),fr=a=>cell(a,x=>shortHj(x.from)),to=a=>cell(a,x=>shortHj(x.to||x.from));
-body+=cnt(D.sick)+fr(D.sick)+to(D.sick)+cell(D.sick,x=>escH(x.ref))+cell(D.sick,x=>shortHj(x.reportDate))+cell(D.sick,x=>escH(x.place));
-['urgent','mat','care'].forEach(g=>{body+=cnt(D[g])+fr(D[g])+to(D[g])});
-body+=cnt(D.other)+cell(D.other,x=>escH(x.note||x.place))+cell(D.other,x=>escH(x.ref))+fr(D.other)+to(D.other);
-body+=cnt(D.noex)+fr(D.noex)+to(D.noex)+'<td class="sg"></td></tr>'});
-const tc=(g,n)=>'<td class="cnt">'+(tot[g]?ar(tot[g]):'—')+'</td><td colspan="'+(n-1)+'" class="tz"></td>';
-body+='<tr class="tot"><th class="mo">المجموع</th>'+tc('sick',6)+tc('urgent',3)+tc('mat',3)+tc('care',3)+tc('other',5)+tc('noex',3)+'<td></td></tr>';
+const cell=(a,f,c)=>'<td'+(c?' class="'+c+'"':'')+'>'+L(a,f)+'</td>';let body='';
+months.forEach(([y,m])=>{const D=data[y+'-'+m],mn=HM[m-1]+(m===7?' '+ar(y):'');body+='<tr><th class="mo">'+mn+'</th>';const cnt=a=>cell(a,x=>x.days?ar(x.days):'','cnt'),fr=a=>cell(a,x=>shortHj(x.from)),to=a=>cell(a,x=>shortHj(x.to||x.from));body+=cnt(D.sick)+fr(D.sick)+to(D.sick)+cell(D.sick,x=>escH(x.ref))+cell(D.sick,x=>shortHj(x.reportDate))+cell(D.sick,x=>escH(x.place));['urgent','mat','care'].forEach(g=>{body+=cnt(D[g])+fr(D[g])+to(D[g])});body+=cnt(D.other)+cell(D.other,x=>escH(x.note||x.place))+cell(D.other,x=>escH(x.ref))+fr(D.other)+to(D.other);body+=cnt(D.noex)+fr(D.noex)+to(D.noex)+'<td class="sg"></td></tr>'});
+body+='<tr class="tot"><th class="mo">المجموع</th>'+G.map(g=>{const n=g==='sick'?6:g==='other'?5:3;return '<td class="cnt">'+(tot[g]?ar(tot[g]):'—')+'</td><td colspan="'+(n-1)+'" class="tz"></td>'}).join('')+'<td></td></tr>';
 const sumLine='<div class="xsum">إجمالي أيام الغياب: <b>'+ar(all)+'</b> يوم'+(tot.noex?' — منها بدون عذر: <b>'+ar(tot.noex)+'</b>':'')+'</div>';
-return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">حصر الغياب — العام الهجري '+ar(yr)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
-
+return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">حصر الغياب — العام الهجري '+ar(hparts(range.from).y)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
 function formA(e,range){
 const yr=hparts(range.from).y,months=monthsIn(range.from,range.to),cells={},tot={};
 months.forEach(([y,m])=>tot[y+'-'+m]=0);
