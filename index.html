@@ -369,6 +369,7 @@ function endOfYear(d){return new Date(d.getFullYear(),11,31)}
 function toInputDate(d){const x=dateOnly(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
 function getReportRange(){const p=_g('repPeriod').value,r=hRange(p,new Date()),label={week:'تقرير أسبوعي',year:'تقرير سنوي'}[p]||'تقرير شهري';return{from:parseDateSafe(_g('repDateFrom').value)||r[0],to:parseDateSafe(_g('repDateTo').value)||r[1],label:label}}
 function setDefaultReportDates(){const r=hRange(_g('repPeriod').value,new Date());setHP('repDateFrom',toInputDate(r[0]));setHP('repDateTo',toInputDate(r[1]))}
+function absenceOverlapsRange(x,from,to){const a=dateOnly(from),b=dateOnly(to);const s=dateOnly(parseDateSafe(x.from||x.reportDate));if(!s)return false;const e=dateOnly(parseDateSafe(x.to||x.from||x.reportDate)||s);return s<=b&&e>=a}
 function recordInRange(v,from,to){const d=parseDateSafe(v);if(!d)return false;const x=dateOnly(d),a=dateOnly(from),b=dateOnly(to);return x>=a&&x<=b}
 function formatPeriod(a,b,label){return label+' — من '+hjStr(a)+' ('+grStr(a)+') إلى '+hjStr(b)+' ('+grStr(b)+')'}
 
