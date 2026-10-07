@@ -108,6 +108,22 @@ body.one-page-print #report>.fx:last-child{break-after:auto!important;page-break
 body.one-page-print .xt{min-width:0!important}
 body.one-page-print .xt tbody tr{height:22px!important}
 </style>
+<script>
+/* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
+(function(){
+  const UI_VERSION='2026-10-07-01';
+  const KEY='ibnhisham_ui_version';
+  try{
+    const old=localStorage.getItem(KEY);
+    if(old && old!==UI_VERSION){
+      localStorage.setItem(KEY,UI_VERSION);
+      location.reload();
+      return;
+    }
+    localStorage.setItem(KEY,UI_VERSION);
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 <div class="app"><header class="side"><button class="menu-toggle" id="menuBtn" type="button" onclick="toggleMenu()" aria-label="القائمة" aria-expanded="false">☰</button><div class="brand">منصة رصد الغياب والتأخير<small>مدرسة ابن هشام للطفولة المبكرة</small></div><nav class="nav" id="mainNav"><button class="active" data-go="home">🏠 الرئيسية</button><button data-go="absence">📝 رصد الغياب</button><button data-go="late">⏰ رصد التأخير</button><button data-go="employees">👩‍💼 الموظفات</button><button data-go="reports">📊 التقارير</button><button data-go="record-management">🗂️ إدارة الرصد</button><button data-go="settings">⚙️ الإعدادات</button></nav></header>
