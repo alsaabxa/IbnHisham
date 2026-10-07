@@ -468,7 +468,7 @@ function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b
 function renderReport(){
 _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=type==='A'?annualRange(getReportRange()):getReportRange();
-const abs=state.absences.filter(x=>(!id||x.empId===id)&&recordInRange(x.from||x.reportDate,range.from,range.to));
+const abs=state.absences.filter(x=>(!id||x.empId===id)&&absenceOverlapsRange(x,range.from,range.to));
 const late=state.lates.filter(x=>(!id||x.empId===id)&&recordInRange(x.date,range.from,range.to));
 const currentEmployeeForReport=x=>state.employees.find(e=>String(e.id)===String(x.empId))||null;
 const reportName=x=>{const e=currentEmployeeForReport(x);return e?e.name:(x.name||'')};
