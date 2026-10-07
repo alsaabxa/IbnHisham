@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-07-05';
+  const UI_VERSION='2026-10-07-06';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -413,7 +413,7 @@ function mgr(){const t=S(),e=t.managerId&&state.employees.find(x=>String(x.id)==
 function fillSettings(){const t=S(),g=_g;g('settingStart').value=t.start||'07:00';g('settingStartSummer').value=t.startSummer||t.start||'07:00';g('seasonMode').value=t.seasonMode||'auto';g('summerFrom').value=t.summerFrom||'';g('summerTo').value=t.summerTo||'';g('schoolName').value=schoolName();g('deptName').value=dept();g('managerName').value=mgr();g('settingWarn1').value=t.warn1||30;g('settingWarn2').value=t.warn2||60}
 function initRepDefaults(){_g('repSection').value='late';_g('repType').value='A'}
 function repHead(){return '<div class="rhead"><div class="rtxt"><b>وزارة التعليم</b><span>'+dept()+'</span><span>'+schoolName()+'</span></div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div>'}
-function repFoot(e){return '<div class="rfoot"><div><span>الموظفة</span><b>صفية عسيري</b><span>التوقيع: ................................</span></div><div><span>مديرة المدرسة</span><b>التوقيع: ................................</b></div></div>'}
+function repFoot(e){return '<div class="rfoot"><div><span>الموظفة</span><b>صفية عسيري</b><span>التوقيع: ................................</span></div><div><span>مديرة المدرسة</span><b>مرفت خليل سمندر</b><span>التوقيع: ................................</span></div></div>'}
 const _offCache={};
 function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1;m<=12;m++)for(let d=1;d<=30;d++){const g=h2g(yr,m,d);o[m+'-'+d]=!g||g.getDay()===5||g.getDay()===6}return _offCache[yr]=o}
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
