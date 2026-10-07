@@ -161,11 +161,11 @@ async function syncToSheets(){
     console.warn('sync failed',r);
     syncRetryTimer=setTimeout(()=>syncToSheets(),3000);
   }
-  return r;
   if(syncQueued){
     syncQueued=false;
     queueSheetSync(0);
   }
+  return r;
 }
 async function loadFromSheets(){const r=await apiGet('all');if(!r||!r.ok||!r.data)return;const d=r.data;const pending=state.pendingDeletes||[];const blocked={absence:new Set(),late:new Set(),lateness:new Set(),action:new Set(),employee:new Set()};pending.forEach(x=>{if(blocked[x.type])blocked[x.type].add(String(x.id))});const filter=(arr,type)=>Array.isArray(arr)?arr.filter(x=>!blocked[type].has(String(x.id))):[];const merge=(a,b)=>{const m=new Map((a||[]).map(x=>[String(x.id),x]));(b||[]).forEach(x=>m.set(String(x.id),x));return [...m.values()]};state.employees=merge(state.employees.filter(x=>!blocked.employee.has(String(x.id))),filter(d.employees,'employee'));state.absences=merge(state.absences,filter(d.absences,'absence'));state.lates=merge(state.lates,filter(d.lates||d.lateness,'late'));state.actions=merge(state.actions,filter(d.actions||[],'action'));{const rs=d.settings||{},lu=Number(state.settings.settingsUpdated)||0,ru=Number(rs.settingsUpdated)||0,keepUrl=state.settings.apiUrl;if(ru>lu||(!lu&&ru===0))state.settings=Object.assign({},state.settings,rs);if(keepUrl)state.settings.apiUrl=keepUrl}Object.keys(d.signatures||{}).forEach(k=>state.signatures[k]=d.signatures[k]);localStorage.setItem(KEY,JSON.stringify(state));refresh();if(pending.length)await syncToSheets()}
 
