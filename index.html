@@ -467,7 +467,8 @@ function monthRecs(e,y,m){
    /* إذا كان الشهر المحفوظ يطابق شهر التقرير، نحافظ على الرصد حتى مع اختلاف تحويل التاريخ القادم من Sheets */
    if(storedMonth===m){
     const p=hparts(a);
-    if(p.y===y&&p.m!==m)A[p.d]=x;
+    const expectedYears=(m===7?[y,y+1]:([1,3,4,5,6].includes(m)?[y+1]:[y]));
+    if(expectedYears.includes(p.y))A[p.d]=x;
    }
   }else if(storedMonth===m){
    A[1]=x;
