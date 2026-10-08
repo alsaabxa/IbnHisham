@@ -419,6 +419,13 @@ function reportMonthsIn(a,b){
  if(out.length&&out[0][1]===7&&out[out.length-1][1]===6)out.push([out[out.length-1][0]+1,7]);
  return out;
 }
+function reportMonthsInA(a,b){
+ const p=hparts(a),y=p.y;
+ return [
+  [y,7],[y,8],[y,9],[y,10],[y,11],[y,12],
+  [y+1,1],[y+1,3],[y+1,4],[y+1,5],[y+1,6],[y+1,7]
+ ];
+}
 function monthsIn(a,b){const out=[],pa=hparts(a),pb=hparts(b);let y=pa.y,m=pa.m,g=0;while((y<pb.y||(y===pb.y&&m<=pb.m))&&g++<14){if(m!==2)out.push([y,m]);m++;if(m>12){m=1;y++}}return out}
 function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);return a&&b?Math.round((b-a)/864e5):30}
 function monthRecs(e,y,m){const L={},A={};state.lates.forEach(x=>{if(x.empId!==e.id)return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});state.absences.forEach(x=>{if(x.empId!==e.id)return;const a=parseDateSafe(x.from);if(!a)return;const b=parseDateSafe(x.to)||a;let d=addDays(a,0),n=0;while(dateOnly(d)<=dateOnly(b)&&n++<400){const p=hparts(d);if(p.y===y&&p.m===m)A[p.d]=x;d=addDays(d,1)}});return{L,A}}
@@ -440,7 +447,7 @@ function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function shortHj(v){const d=parseDateSafe(v);if(!d)return '';const p=hparts(d);return ar(p.d)+'/'+ar(p.m)}
 function formAAbsence(e,range){
-const yr=hparts(range.from).y,months=reportMonthsIn(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
+const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
 const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
 const tot={};G.forEach(g=>tot[g]=0);let all=0;
 const seen={};months.forEach(([y,m])=>{const mr=monthRecs(e,y,m).A;Object.keys(mr).forEach(day=>{const x=mr[day];if(!x)return;const keyId=String(x.id||[x.empId,x.from,x.to,x.type,x.days,x.ref,x.reportDate,x.place,x.note,x.created].join('|'));if(seen[keyId])return;seen[keyId]=1;const g=KEYS[x.type]||'other',n=Number(x.days)||0;tot[g]+=n;all+=n;const key=y+'-'+m;if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')&&String(z.from)===String(x.from)&&String(z.to)===String(x.to))){data[key][g].push(x)}})});
@@ -469,7 +476,7 @@ const sumLine='<div class="xsum">إجمالي أيام الغياب: <b>'+ar(all
 return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">حصر الغياب — العام الهجري '+ar(yr)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
 
 function formA(e,range){
-const yr=hparts(range.from).y,months=reportMonthsIn(range.from,range.to),cells={},tot={};
+const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),cells={},tot={};
 months.forEach(([y,m])=>tot[y+'-'+m]=0);
 state.lates.filter(x=>x.empId===e.id&&recordInRange(x.date,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
 let h1='<th rowspan="2" class="dc">التاريخ</th>',h2='',b='';
