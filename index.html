@@ -378,7 +378,20 @@ function sameEmployeeRecord(x,e){
  const en=String(e.name??'').trim();
  return !!xn&&!!en&&xn===en;
 }
-function absenceOverlapsRange(x,from,to){const a=dateOnly(from),b=dateOnly(to);const s=dateOnly(parseDateSafe(x.from||x.reportDate));if(!s)return false;const e=dateOnly(parseDateSafe(x.to||x.from||x.reportDate)||s);return s<=b&&e>=a}
+function absenceOverlapsRange(x,from,to){
+ const a=dateOnly(from),b=dateOnly(to);
+ const s0=parseDateSafe(x.from||x.reportDate),e0=parseDateSafe(x.to||x.from||x.reportDate);
+ if(s0){
+  const s=dateOnly(s0),e=dateOnly(e0||s0);
+  if(s<=b&&e>=a)return true;
+ }
+ const md=String(x.month==null?'':x.month).trim();
+ if(!md)return false;
+ const mm=HM.indexOf(md)>=0?HM.indexOf(md)+1:(md==='ربيع الآخره'?4:0);
+ if(!mm)return false;
+ const af=hparts(a),bt=hparts(b);
+ return mm>=af.m&&mm<=bt.m&&af.y===bt.y || (af.y!==bt.y&&(mm>=af.m||mm<=bt.m));
+}
 function recordInRange(v,from,to){const d=parseDateSafe(v);if(!d)return false;const x=dateOnly(d),a=dateOnly(from),b=dateOnly(to);return x>=a&&x<=b}
 function formatPeriod(a,b,label){return label+' — من '+hjStr(a)+' ('+grStr(a)+') إلى '+hjStr(b)+' ('+grStr(b)+')'}
 
