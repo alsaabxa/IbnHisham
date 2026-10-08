@@ -369,6 +369,15 @@ function endOfYear(d){return new Date(d.getFullYear(),11,31)}
 function toInputDate(d){const x=dateOnly(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
 function getReportRange(){const p=_g('repPeriod').value,r=hRange(p,new Date()),label={week:'تقرير أسبوعي',year:'تقرير سنوي'}[p]||'تقرير شهري';return{from:parseDateSafe(_g('repDateFrom').value)||r[0],to:parseDateSafe(_g('repDateTo').value)||r[1],label:label}}
 function setDefaultReportDates(){const r=hRange(_g('repPeriod').value,new Date());setHP('repDateFrom',toInputDate(r[0]));setHP('repDateTo',toInputDate(r[1]))}
+function sameEmployeeRecord(x,e){
+ if(!x||!e)return false;
+ const xid=x.empId??x.employeeId??x.employeeID??x.employee_id;
+ const eid=e.id;
+ if(xid!=null&&eid!=null&&String(xid)===String(eid))return true;
+ const xn=String(x.name??x.employeeName??x.employee_name??'').trim();
+ const en=String(e.name??'').trim();
+ return !!xn&&!!en&&xn===en;
+}
 function absenceOverlapsRange(x,from,to){const a=dateOnly(from),b=dateOnly(to);const s=dateOnly(parseDateSafe(x.from||x.reportDate));if(!s)return false;const e=dateOnly(parseDateSafe(x.to||x.from||x.reportDate)||s);return s<=b&&e>=a}
 function recordInRange(v,from,to){const d=parseDateSafe(v);if(!d)return false;const x=dateOnly(d),a=dateOnly(from),b=dateOnly(to);return x>=a&&x<=b}
 function formatPeriod(a,b,label){return label+' — من '+hjStr(a)+' ('+grStr(a)+') إلى '+hjStr(b)+' ('+grStr(b)+')'}
@@ -488,7 +497,7 @@ return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظف
 function formA(e,range){
 const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),cells={},tot={};
 months.forEach(([y,m])=>tot[y+'-'+m]=0);
-state.lates.filter(x=>x.empId===e.id&&recordInRange(x.date,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
+state.lates.filter(x=>sameEmployeeRecord(x,e)&&recordInRange(x.date,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
 let h1='<th rowspan="2" class="dc">التاريخ</th>',h2='',b='';
 months.forEach(([y,m])=>{const mn=hmName(m)+(m===7?' '+ar(y):'');h1+='<th colspan="2">'+mn+'</th>';h2+='<th class="g">حضور</th><th class="r">التأخر</th>'});
 for(let d=1;d<=30;d++){b+='<tr'+(d%5===0?' class="b5"':'')+'><th class="dc">'+ar(d)+'</th>';months.forEach(([y,m])=>{const c=cells[y+'-'+m+'-'+d],gd=h2g(y,m,d),off=!gd||gd.getDay()===5||gd.getDay()===6;const cls=off&&!(c&&(c.arr||c.min))?' class="off"':'';b+='<td class="tm'+(off?' off':'')+'">'+(c&&c.arr?fmtT(c.arr):'')+'</td><td'+cls+'>'+(c&&c.min?ar(c.min):'')+'</td>'});b+='</tr>'}
@@ -501,13 +510,13 @@ return '<div class="fa">'+repHead()+'<div class="nbox"><span>اسم الموظف
 function annualRange(r){const p=hparts(r.from),y=p.y,m=p.m||1,a=h2g(y,m,1),nextY=m===12?y+1:y,b0=h2g(nextY,m===12?12:m,1);let b;if(m===12){b=addDays(h2g(y+1,1,1),-1)}else{const nextSame=h2g(y+1,m,1);b=nextSame?addDays(nextSame,-1):null}return a&&b?{from:a,to:b,label:'تقرير سنوي متحرك لمدة 12 شهرًا من '+hmName(m)+' إلى '+hmName(m)}:r}
 
 function updRepHint(){const h=document.getElementById('repHintA');if(h)h.style.display=_g('repType').value==='A'?'block':'none'}
-function latestReportTime(empId,sec,arr){let max=0;arr.forEach(x=>{if(String(x.empId)!==String(empId))return;const vals=sec==='absence'?[x.from,x.to,x.reportDate,x.date,x.created]:[x.date,x.reportDate,x.created];vals.forEach(v=>{const d=parseDateSafe(v);if(d)max=Math.max(max,d.getTime())})});return max}
+function latestReportTime(empId,sec,arr){let max=0;const e=state.employees.find(v=>String(v.id)===String(empId));arr.forEach(x=>{if(!e||!sameEmployeeRecord(x,e))return;const vals=sec==='absence'?[x.from,x.to,x.reportDate,x.date,x.created]:[x.date,x.reportDate,x.created];vals.forEach(v=>{const d=parseDateSafe(v);if(d)max=Math.max(max,d.getTime())})});return max}
 function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b)=>{const db=latestReportTime(b.id,sec,arr),da=latestReportTime(a.id,sec,arr);if(db!==da)return db-da;return String(a.name||'').localeCompare(String(b.name||''),'ar')})}
 function renderReport(){
 _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=type==='A'?annualRange(getReportRange()):getReportRange();
-const abs=state.absences.filter(x=>(!id||x.empId===id)&&absenceOverlapsRange(x,range.from,range.to));
-const late=state.lates.filter(x=>(!id||x.empId===id)&&recordInRange(x.date,range.from,range.to));
+const abs=state.absences.filter(x=>(!id||sameEmployeeRecord(x,emp||state.employees.find(e=>String(e.id)===String(id))))&&absenceOverlapsRange(x,range.from,range.to));
+const late=state.lates.filter(x=>(!id||sameEmployeeRecord(x,emp||state.employees.find(e=>String(e.id)===String(id))))&&recordInRange(x.date,range.from,range.to));
 const currentEmployeeForReport=x=>state.employees.find(e=>String(e.id)===String(x.empId))||null;
 const reportName=x=>{const e=currentEmployeeForReport(x);return e?e.name:(x.name||'')};
 const reportJob=x=>{const e=currentEmployeeForReport(x);return e?e.job:(x.job||'')};
