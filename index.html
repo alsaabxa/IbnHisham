@@ -552,7 +552,7 @@ body+=cnt(D.noex)+fr(D.noex)+to(D.noex)+'<td class="sg"></td></tr>'});
 const tc=(g,n)=>'<td class="cnt">'+(tot[g]?ar(tot[g]):'—')+'</td><td colspan="'+(n-1)+'" class="tz"></td>';
 body+='<tr class="tot"><th class="mo">المجموع</th>'+tc('sick',6)+tc('urgent',3)+tc('mat',3)+tc('care',3)+tc('other',5)+tc('noex',3)+'<td></td></tr>';
 const sumLine='<div class="xsum">إجمالي أيام الغياب: <b>'+ar(all)+'</b> يوم'+(tot.noex?' — منها بدون عذر: <b>'+ar(tot.noex)+'</b>':'')+'</div>';
-return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">حصر الغياب — العام الهجري '+ar(yr)+'هـ — '+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
+return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">سجل حصر الغياب '+ar(yr)+'- '+ar(yr+1)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
 
 function formA(e,range){
 const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),cells={},tot={};
