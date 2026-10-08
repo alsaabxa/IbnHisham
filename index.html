@@ -451,6 +451,17 @@ function reportMonthsInA(a,b){
   [y+1,1],[y+1,3],[y+1,4],[y+1,5],[y+1,6],[y+1,7]
  ];
 }
+/* نموذج A للتأخير: استخدم نفس دورة الأشهر التي يعتمدها نموذج B، ثم اعرض 12 شهرًا فقط
+   بدءًا من أول رجب في الدورة. هذا يمنع اختلاف السنة عند اختيار التقرير من شهر هجري
+   قبل رجب، مع إبقاء ترتيب ونموذج الغياب A كما هو دون تغيير. */
+function reportLateMonthsInA(a,b){
+ const base=reportMonthsIn(a,b),i=base.findIndex(v=>v[1]===7);
+ if(i>=0){
+  const cycle=base.slice(i,i+12);
+  if(cycle.length===12&&cycle[0][1]===7&&cycle[11][1]===7)return cycle;
+ }
+ return reportMonthsInA(a,b);
+}
 function monthsIn(a,b){const out=[],pa=hparts(a),pb=hparts(b);let y=pa.y,m=pa.m,g=0;while((y<pb.y||(y===pb.y&&m<=pb.m))&&g++<14){if(m!==2)out.push([y,m]);m++;if(m>12){m=1;y++}}return out}
 function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);return a&&b?Math.round((b-a)/864e5):30}
 function monthRecs(e,y,m){
@@ -563,7 +574,7 @@ function lateInRangeA(x,from,to){
  return months.some(v=>v[0]===p.y&&v[1]===p.m);
 }
 function formA(e,range){
-const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),cells={},tot={},seen={};
+const yr=hparts(range.from).y,months=reportLateMonthsInA(range.from,range.to),cells={},tot={},seen={};
 months.forEach(([y,m])=>tot[y+'-'+m]=0);
 const putLate=(x,y,m,d)=>{const k=y+'-'+m+'-'+d,c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival&&!c.arr)c.arr=x.arrival;tot[y+'-'+m]+=Number(x.minutes)||0;seen[String(x.id||[x.empId,x.date,x.arrival,x.minutes,x.reason,x.created].join('|'))]=1};
 months.forEach(([y,m])=>{const r=monthRecs(e,y,m).L;Object.keys(r).forEach(d=>(r[d]||[]).forEach(x=>putLate(x,y,m,d)))});
