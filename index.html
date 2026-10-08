@@ -407,7 +407,7 @@ function reportMonthsIn(a,b){
  let y=pa.y,m=pa.m,g=0;
  while(g++<14){
   if(y>pb.y||(y===pb.y&&m>pb.m))break;
-  out.push([y,m]);
+  if(m!==2)out.push([y,m]);
   m++;if(m>12){m=1;y++}
  }
  const rank=(x)=>{const i=order.indexOf(x[1]);return x[0]*12+i};
