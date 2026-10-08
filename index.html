@@ -515,12 +515,13 @@ function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b
 function renderReport(){
 _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=type==='A'?annualRange(getReportRange()):getReportRange();
-const abs=state.absences.filter(x=>(!id||sameEmployeeRecord(x,emp||state.employees.find(e=>String(e.id)===String(id))))&&absenceOverlapsRange(x,range.from,range.to));
-const late=state.lates.filter(x=>(!id||sameEmployeeRecord(x,emp||state.employees.find(e=>String(e.id)===String(id))))&&recordInRange(x.date,range.from,range.to));
-const currentEmployeeForReport=x=>state.employees.find(e=>String(e.id)===String(x.empId))||null;
+const emp=id?state.employees.find(x=>String(x.id)===String(id)):null;
+const abs=state.absences.filter(x=>(!id||sameEmployeeRecord(x,emp))&&absenceOverlapsRange(x,range.from,range.to));
+const late=state.lates.filter(x=>(!id||sameEmployeeRecord(x,emp))&&recordInRange(x.date,range.from,range.to));
+const currentEmployeeForReport=x=>state.employees.find(e=>String(e.id)===String(x.empId??x.employeeId??x.employeeID??x.employee_id))||null;
 const reportName=x=>{const e=currentEmployeeForReport(x);return e?e.name:(x.name||'')};
 const reportJob=x=>{const e=currentEmployeeForReport(x);return e?e.job:(x.job||'')};
-const emp=id?state.employees.find(x=>x.id===id):null,title=type==='B'?(sec==='absence'?'سجل الغياب':'سجل التأخير'):(sec==='absence'?'تقرير الغياب':'تقرير التأخير');
+const title=type==='B'?(sec==='absence'?'سجل الغياب':'سجل التأخير'):(sec==='absence'?'تقرير الغياب':'تقرير التأخير');
 if(sec==='late'&&type==='A'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'late',late);_g('report').innerHTML=es.length?es.map(e=>formA(e,range)).join(''):'<div class="empty">لا توجد سجلات تأخير في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
 if(sec==='absence'&&type==='A'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'absence',abs);_g('report').innerHTML=es.length?es.map(e=>formAAbsence(e,range)).join(''):'<div class="empty">لا توجد سجلات غياب في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
 if(type==='B'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,sec,sec==='late'?late:abs),ms=reportMonthsIn(range.from,range.to),pg=[];es.forEach(e=>ms.forEach(([y,m])=>{const h=sec==='late'?formB(e,y,m,!!emp||!id):formBAbsence(e,y,m,!!emp||!id);if(h)pg.push(h)}));_g('report').innerHTML=pg.length?pg.join(''):'<div class="empty">لا توجد سجلات في الفترة المحددة. اختر موظفة لعرض النموذج الشهري أو غيّر الفترة.</div>';return}
