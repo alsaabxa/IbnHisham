@@ -438,14 +438,9 @@ function reportMonthsInA(a,b){
 function monthsIn(a,b){const out=[],pa=hparts(a),pb=hparts(b);let y=pa.y,m=pa.m,g=0;while((y<pb.y||(y===pb.y&&m<=pb.m))&&g++<14){if(m!==2)out.push([y,m]);m++;if(m>12){m=1;y++}}return out}
 function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);return a&&b?Math.round((b-a)/864e5):30}
 function monthRecs(e,y,m){
- const L={},A={},ename=String(e.name||'').trim();
- const same=(x)=>{
-  if(String(x.empId)===String(e.id))return true;
-  const xn=String(x.name||'').trim();
-  return !!ename&&!!xn&&xn===ename;
- };
- state.lates.forEach(x=>{if(!same(x))return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});
- state.absences.forEach(x=>{if(!same(x))return;const a=parseDateSafe(x.from);if(!a)return;const b=parseDateSafe(x.to)||a;let d=addDays(a,0),n=0;while(dateOnly(d)<=dateOnly(b)&&n++<400){const p=hparts(d);if(p.y===y&&p.m===m)A[p.d]=x;d=addDays(d,1)}});
+ const L={},A={};
+ state.lates.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});
+ state.absences.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const a=parseDateSafe(x.from||x.reportDate);if(!a)return;const b=parseDateSafe(x.to||x.from||x.reportDate)||a;let d=addDays(a,0),n=0;while(dateOnly(d)<=dateOnly(b)&&n++<400){const p=hparts(d);if(p.y===y&&p.m===m)A[p.d]=x;d=addDays(d,1)}});
  return{L,A};
 }
 function bDateCell(d,i){return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hjStr(d):'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
