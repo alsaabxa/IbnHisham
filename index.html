@@ -557,10 +557,15 @@ body+='<tr class="tot"><th class="mo">المجموع</th>'+tc('sick',6)+tc('urge
 const sumLine='<div class="xsum">إجمالي أيام الغياب: <b>'+ar(all)+'</b> يوم'+(tot.noex?' — منها بدون عذر: <b>'+ar(tot.noex)+'</b>':'')+'</div>';
 return '<div class="fx">'+repHead()+'<div class="nbox"><span>اسم الموظفة :- <b>'+escH(e.name)+'</b></span><span>الوظيفة :- <b>'+escH(e.job)+'</b></span></div><div class="rper">سجل حصر الغياب '+ar(yr)+'- '+ar(yr+1)+'</div><div class="rnow">'+dateBlock(new Date())+'</div><div class="table-wrap"><table class="xt">'+cg+head+'<tbody>'+body+'</tbody></table></div>'+sumLine+repFoot(e)+'</div>'}
 
+function lateInRangeA(x,from,to){
+ const d=parseDateSafe(x&&x.date);if(!d)return false;
+ const p=hparts(d),months=reportMonthsInA(from,to);
+ return months.some(v=>v[0]===p.y&&v[1]===p.m);
+}
 function formA(e,range){
 const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),cells={},tot={};
 months.forEach(([y,m])=>tot[y+'-'+m]=0);
-state.lates.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
+state.lates.filter(x=>sameEmployeeRecord(x,e)&&lateInRangeA(x,range.from,range.to)).forEach(x=>{const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d),k=p.y+'-'+p.m+'-'+p.d;if(!Object.prototype.hasOwnProperty.call(tot,p.y+'-'+p.m))return;const c=cells[k]||(cells[k]={min:0,arr:''});c.min+=Number(x.minutes)||0;if(x.arrival)c.arr=x.arrival;tot[p.y+'-'+p.m]+=Number(x.minutes)||0});
 let h1='<th rowspan="2" class="dc">التاريخ</th>',h2='',b='';
 months.forEach(([y,m])=>{const mn=hmName(m)+(m===7?' '+ar(y):'');h1+='<th colspan="2">'+mn+'</th>';h2+='<th class="g">حضور</th><th class="r">التأخر</th>'});
 for(let d=1;d<=30;d++){b+='<tr'+(d%5===0?' class="b5"':'')+'><th class="dc">'+ar(d)+'</th>';months.forEach(([y,m])=>{const c=cells[y+'-'+m+'-'+d],gd=h2g(y,m,d),off=!gd||gd.getDay()===5||gd.getDay()===6;const cls=off&&!(c&&(c.arr||c.min))?' class="off"':'';b+='<td class="tm'+(off?' off':'')+'">'+(c&&c.arr?fmtT(c.arr):'')+'</td><td'+cls+'>'+(c&&c.min?ar(c.min):'')+'</td>'});b+='</tr>'}
@@ -585,7 +590,7 @@ const currentEmployeeForReport=x=>state.employees.find(e=>String(e.id)===String(
 const reportName=x=>{const e=currentEmployeeForReport(x);return e?e.name:(x.name||'')};
 const reportJob=x=>{const e=currentEmployeeForReport(x);return e?e.job:(x.job||'')};
 const title=type==='B'?(sec==='absence'?'سجل الغياب':'سجل التأخير'):(sec==='absence'?'تقرير الغياب':'تقرير التأخير');
-if(sec==='late'&&type==='A'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'late',late);_g('report').innerHTML=es.length?es.map(e=>formA(e,range)).join(''):'<div class="empty">لا توجد سجلات تأخير في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
+if(sec==='late'&&type==='A'){const lateA=state.lates.filter(x=>lateInRangeA(x,range.from,range.to)&&(!id||sameEmployeeRecord(x,emp)));const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'late',lateA);_g('report').innerHTML=es.length?es.map(e=>formA(e,range)).join(''):'<div class="empty">لا توجد سجلات تأخير في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
 if(sec==='absence'&&type==='A'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'absence',abs);_g('report').innerHTML=es.length?es.map(e=>formAAbsence(e,range)).join(''):'<div class="empty">لا توجد سجلات غياب في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
 if(type==='B'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,sec,sec==='late'?late:abs),ms=reportMonthsIn(range.from,range.to),pg=[];es.forEach(e=>ms.forEach(([y,m])=>{const h=sec==='late'?formB(e,y,m,!!emp||!id):formBAbsence(e,y,m,!!emp||!id);if(h)pg.push(h)}));_g('report').innerHTML=pg.length?pg.join(''):'<div class="empty">لا توجد سجلات في الفترة المحددة. اختر موظفة لعرض النموذج الشهري أو غيّر الفترة.</div>';return}
 const td=a=>'<tr>'+a.map((v,i)=>'<td'+(i===0||typeof v==='number'?' class="report-num"':'')+(typeof v==='string'&&(/[0-9٠-٩]/.test(v))?' class="report-date"':'')+'>'+(v===undefined||v===null?'':v)+'</td>').join('');let rows='',headers='';
