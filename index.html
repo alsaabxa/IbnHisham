@@ -403,16 +403,19 @@ function warnLim(){return[+S().warn1||30,+S().warn2||60]}
 function actName(t){const[a,b]=warnLim();return t>=b?'إنذار خطي (تجاوز '+ar(b)+' دقيقة)':t>=a?'إنذار خطي':t>0?'إنذار شفهي':''}
 /* ترتيب أشهر التقارير فقط — لا يغيّر ترتيب الخيارات أو ترقيم الأشهر أو بيانات الرصد */
 function reportMonthsIn(a,b){
- const out=[],pa=hparts(a),pb=hparts(b),order=[7,8,9,10,11,12,1,2,3,4,5,6];
+ const out=[],pa=hparts(a),pb=hparts(b);
  let y=pa.y,m=pa.m,g=0;
  while(g++<14){
   if(y>pb.y||(y===pb.y&&m>pb.m))break;
-  if(m!==2)out.push([y,m]);
+  out.push([y,m]);
   m++;if(m>12){m=1;y++}
  }
- const rank=(x)=>{const i=order.indexOf(x[1]);return x[0]*12+i};
+ /* ترتيب الدورة الفعلي: رجب ثم الأشهر التالية حتى جمادى الآخرة ثم رجب التالية */
+ const rank=(x)=>{
+  const y=x[0],m=x[1];
+  return m>=7 ? (y-pa.y)*12+(m-7) : (y-pa.y-1)*12+(m+5);
+ };
  out.sort((x,z)=>rank(x)-rank(z));
- /* دورة التقارير تبدأ برجب وتنتهي برجب التالية */
  if(out.length&&out[0][1]===7&&out[out.length-1][1]===6)out.push([out[out.length-1][0]+1,7]);
  return out;
 }
