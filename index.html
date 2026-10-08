@@ -440,9 +440,10 @@ function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);ret
 function monthRecs(e,y,m){
  const L={},A={};
  state.lates.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});
+ const monthNo=n=>{const s=String(n==null?'':n).trim();const i=HM.indexOf(s);return i>=0?i+1:(s==='ربيع الآخره'?4:0)};
  state.absences.forEach(x=>{
   if(!sameEmployeeRecord(x,e))return;
-  const a=parseDateSafe(x.from||x.reportDate),b=parseDateSafe(x.to||x.from||x.reportDate)||a;
+  const a=parseDateSafe(x.from||x.reportDate),b=parseDateSafe(x.to||x.from||x.reportDate)||a,storedMonth=monthNo(x.month);
   if(a){
    let d=addDays(a,0),n=0;
    while(dateOnly(d)<=dateOnly(b)&&n++<400){
@@ -450,8 +451,13 @@ function monthRecs(e,y,m){
     if(p.y===y&&p.m===m)A[p.d]=x;
     d=addDays(d,1);
    }
-  }else if(x.month===hmName(m)){
-   const d=1;A[d]=x;
+   /* إذا كان الشهر المحفوظ يطابق شهر التقرير، نحافظ على الرصد حتى مع اختلاف تحويل التاريخ القادم من Sheets */
+   if(storedMonth===m){
+    const p=hparts(a);
+    if(p.y===y&&p.m!==m)A[p.d]=x;
+   }
+  }else if(storedMonth===m){
+   A[1]=x;
   }
  });
  return{L,A};
