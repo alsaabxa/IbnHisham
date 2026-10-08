@@ -440,7 +440,20 @@ function monthLen(y,m){const a=h2g(y,m,1),b=m===12?h2g(y+1,1,1):h2g(y,m+1,1);ret
 function monthRecs(e,y,m){
  const L={},A={};
  state.lates.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const d=parseDateSafe(x.date);if(!d)return;const p=hparts(d);if(p.y===y&&p.m===m)(L[p.d]=L[p.d]||[]).push(x)});
- state.absences.forEach(x=>{if(!sameEmployeeRecord(x,e))return;const a=parseDateSafe(x.from||x.reportDate);if(!a)return;const b=parseDateSafe(x.to||x.from||x.reportDate)||a;let d=addDays(a,0),n=0;while(dateOnly(d)<=dateOnly(b)&&n++<400){const p=hparts(d);if(p.y===y&&p.m===m)A[p.d]=x;d=addDays(d,1)}});
+ state.absences.forEach(x=>{
+  if(!sameEmployeeRecord(x,e))return;
+  const a=parseDateSafe(x.from||x.reportDate),b=parseDateSafe(x.to||x.from||x.reportDate)||a;
+  if(a){
+   let d=addDays(a,0),n=0;
+   while(dateOnly(d)<=dateOnly(b)&&n++<400){
+    const p=hparts(d);
+    if(p.y===y&&p.m===m)A[p.d]=x;
+    d=addDays(d,1);
+   }
+  }else if(x.month===hmName(m)){
+   const d=1;A[d]=x;
+  }
+ });
  return{L,A};
 }
 function bDateCell(d,i){return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hjStr(d):'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
