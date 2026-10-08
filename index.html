@@ -497,8 +497,40 @@ function formAAbsence(e,range){
 const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
 const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
 const tot={};G.forEach(g=>tot[g]=0);let all=0;
-const seen={};months.forEach(([y,m])=>{const mr=monthRecs(e,y,m).A;Object.keys(mr).forEach(day=>{const x=mr[day];if(!x)return;const keyId=String(x.id||[x.empId,x.from,x.to,x.type,x.days,x.ref,x.reportDate,x.place,x.note,x.created].join('|'));if(seen[keyId])return;seen[keyId]=1;const g=KEYS[x.type]||'other',n=Number(x.days)||0;tot[g]+=n;all+=n;const key=y+'-'+m;if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')&&String(z.from)===String(x.from)&&String(z.to)===String(x.to))){data[key][g].push(x)}})});
-const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6};
+const seen={};
+months.forEach(([y,m])=>{
+ const mr=monthRecs(e,y,m).A;
+ Object.keys(mr).forEach(day=>{
+  const x=mr[day]; if(!x)return;
+  const keyId=String(x.id||[x.empId,x.from,x.to,x.type,x.days,x.ref,x.reportDate,x.place,x.note,x.created].join('|'));
+  if(seen[keyId])return; seen[keyId]=1;
+  const g=KEYS[x.type]||'other',n=Number(x.days)||0;
+  tot[g]+=n; all+=n;
+  const key=y+'-'+m;
+  if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')&&String(z.from)===String(x.from)&&String(z.to)===String(x.to))) data[key][g].push(x);
+ });
+});
+/* احتياط خاص بالنموذج A: إذا اختلف تحويل التاريخ القادم من التخزين، نعتمد الشهر الهجري المحفوظ مع أقرب سنة موجودة في فترة A. */
+state.absences.forEach(x=>{
+ if(!sameEmployeeRecord(x,e))return;
+ const sm=(function(v){const s=String(v==null?'':v).trim(),i=HM.indexOf(s);return i>=0?i+1:(s==='ربيع الآخره'?4:0)})(x.month);
+ if(!sm)return;
+ const d=parseDateSafe(x.from||x.reportDate);
+ const hp=d?hparts(d):null;
+ let target=null;
+ if(hp) target=months.find(q=>q[0]===hp.y&&q[1]===sm);
+ if(!target){
+  const cand=months.filter(q=>q[1]===sm);
+  if(cand.length===1) target=cand[0];
+  else if(cand.length) target=cand.slice().sort((a,b)=>Math.abs(a[0]-(hp?hp.y:a[0]))-Math.abs(b[0]-(hp?hp.y:b[0])))[0];
+ }
+ if(!target)return;
+ const key=target[0]+'-'+target[1],g=KEYS[x.type]||'other',id=String(x.id||[x.empId,x.from,x.to,x.type,x.days,x.ref,x.reportDate,x.place,x.note,x.created].join('|'));
+ if(seen[id])return;
+ seen[id]=1;
+ const n=Number(x.days)||0;tot[g]+=n;all+=n;
+ if(data[key]&&!data[key][g].some(z=>String(z.id||'')===String(x.id||'')&&String(z.from)===String(x.from)&&String(z.to)===String(x.to)))data[key][g].push(x);
+});const W={mo:6.6,cnt:3.2,dt:4.4,rno:4.4,rdt:4.4,rpl:7,kind:6.5,sg:5.6};
 const cols=[W.mo,W.cnt,W.dt,W.dt,W.rno,W.rdt,W.rpl,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.dt,W.dt,W.cnt,W.kind,W.rno,W.dt,W.dt,W.cnt,W.dt,W.dt,W.sg],sum=cols.reduce((a,b)=>a+b,0);
 const cg='<colgroup>'+cols.map(w=>'<col style="width:'+(w/sum*100).toFixed(2)+'%">').join('')+'</colgroup>';
 const ft=['من','إلى'].map(t=>'<th class="g2">'+t+'</th>').join('');
