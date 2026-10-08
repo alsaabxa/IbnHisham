@@ -407,7 +407,7 @@ function reportMonthsIn(a,b){
  let y=pa.y,m=pa.m,g=0;
  while(g++<14){
   if(y>pb.y||(y===pb.y&&m>pb.m))break;
-  out.push([y,m]);
+  if(m!==2)out.push([y,m]);
   m++;if(m>12){m=1;y++}
  }
  /* ترتيب الدورة الفعلي: رجب ثم الأشهر التالية حتى جمادى الآخرة ثم رجب التالية */
