@@ -720,21 +720,37 @@ function portalDateHtml(value){try{const d=parseDateSafe(value);if(!d)return esc
 async function initEmployeePortal(){
  const token=new URLSearchParams(location.search).get('portal');
  if(!token)return false;
- document.body.innerHTML='<main id="employeePortalRoot" dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:1100px;margin:24px auto;padding:16px;color:#172b3a"><h1 style="color:#0f2a43">التقارير الخاصة بالموظفة</h1><p>جارٍ تحميل التقرير...</p></main>';
+ document.body.innerHTML='<main id="employeePortalRoot" dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:1180px;margin:0 auto;padding:18px;color:#172b3a;background:#f5f8fa"><div style="background:#0f2a43;color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:16px"><h1 style="margin:0;font-size:22px">التقرير الخاص بالموظفة</h1><p style="margin:5px 0 0;opacity:.85">منصة ابن هشام للطفولة المبكرة</p></div><p>جارٍ تحميل التقرير...</p></main>';
  const root=document.getElementById('employeePortalRoot');
  try{
   const url=(state.settings&&state.settings.apiUrl||'').trim();
+  if(!url) throw new Error('رابط الخدمة غير مضبوط');
   const response=await fetch(url+'?action=employeeReport&token='+encodeURIComponent(token),{cache:'no-store'});
   const result=await response.json();
-  if(!result||!result.ok){root.innerHTML='<h1>تعذر فتح التقرير</h1><p>'+escH(result&&result.error||'تعذر الاتصال بالخدمة')+'</p>';return true;}
-  const e=result.employee,d=result.data||{};
-  const table=(title,rows,headers,fields)=>'<section style="margin:18px 0;padding:16px;border:1px solid #dce5eb;border-radius:14px"><h2>'+title+' ('+rows.length+')</h2>'+(rows.length?'<div style="overflow:auto"><table style="border-collapse:collapse;width:100%"><thead><tr>'+headers.map(h=>'<th style="background:#eef4f7;padding:9px;border:1px solid #dce5eb;text-align:right">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(x=>'<tr>'+fields.map(k=>'<td style="padding:9px;border:1px solid #dce5eb;vertical-align:top">'+(['from','to','date'].includes(k)&&x[k]?portalDateHtml(x[k]):escH(x[k]??''))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p>لا توجد سجلات.</p>')+'</section>';
-  root.innerHTML='<h1 style="color:#0f2a43">التقارير الخاصة بالموظفة</h1><p><b>الاسم:</b> '+escH(e.name)+'　 <b>الوظيفة:</b> '+escH(e.job||'')+'</p><p>هذه صفحة عرض فقط، ولا تتيح تعديل أو حذف السجلات.</p>'+
-   table('الغياب',d.absences||[],['التاريخ من','إلى','نوع الغياب','الأيام','الشهر','ملاحظات'],['from','to','type','days','month','note'])+
-   table('التأخير',d.lates||[],['التاريخ','بداية الدوام','وقت الحضور','دقائق التأخير','السبب'],['date','start','arrival','minutes','reason'])+
-   table('الإجراءات',d.actions||[],['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],['date','type','text','note'])+
-   '<p style="color:#6b7c8f;font-size:12px">منصة ابن هشام للطفولة المبكرة</p>';
- }catch(err){root.innerHTML='<h1>تعذر فتح التقرير</h1><p>تحققي من نشر Code.gs المحدّث.</p>';}
+  if(!result||!result.ok){root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>'+escH(result&&result.error||'تعذر الاتصال بالخدمة')+'</p></div>';return true;}
+  const e=result.employee||{},d=result.data||{},abs=d.absences||[],lates=d.lates||[],actions=d.actions||[];
+  const dateCell=v=>v?portalDateHtml(v):'—';
+  const section=(title,body)=>'<section style="background:#fff;border:1px solid #dce5eb;border-radius:16px;padding:16px;margin:16px 0;box-shadow:0 4px 16px #0f2a4310"><h2 style="margin:0 0 12px;color:#0f2a43;font-size:18px">'+title+'</h2>'+body+'</section>';
+  const empty='<div style="padding:18px;text-align:center;color:#6b7c8f;background:#f8fafb;border-radius:10px">لا توجد سجلات.</div>';
+  const table=(headers,rows)=>rows.length?'<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:12px"><thead><tr>'+headers.map(h=>'<th style="background:#eef4f7;padding:8px;border:1px solid #dce5eb;text-align:center;white-space:nowrap">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td style="padding:8px;border:1px solid #dce5eb;text-align:center;vertical-align:top">'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':empty;
+  const aRows=[];
+  abs.forEach(x=>aRows.push(['غياب',dateCell(x.from),dateCell(x.to),escH(x.type||''),escH(x.days||''),escH(x.note||'')]));
+  lates.forEach(x=>aRows.push(['تأخير',dateCell(x.date),dateCell(x.date),escH(x.reason||''),escH(x.minutes||''),escH(x.note||'')]));
+  aRows.sort((x,y)=>String(y[1]).localeCompare(String(x[1])));
+  const months={};
+  abs.forEach(x=>{const m=String(x.month||x.from||x.reportDate||'غير محدد');months[m]=months[m]||{abs:0,late:0,minutes:0};months[m].abs++;});
+  lates.forEach(x=>{const m=String(x.month||x.date||x.created||'غير محدد');months[m]=months[m]||{abs:0,late:0,minutes:0};months[m].late++;months[m].minutes+=Number(x.minutes)||0;});
+  const bRows=Object.keys(months).sort().reverse().map(m=>[escH(m),months[m].abs,months[m].late,months[m].minutes]);
+  const summary='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+abs.length+'</b> غياب</div><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+lates.length+'</b> تأخير</div><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+actions.length+'</b> إجراء</div></div>';
+  root.innerHTML=
+   '<div style="background:#fff;border:1px solid #dce5eb;border-radius:16px;padding:18px;margin-bottom:16px"><h2 style="margin:0;color:#0f2a43">'+escH(e.name||'')+'</h2><p style="margin:5px 0;color:#6b7c8f">'+escH(e.job||'')+'</p>'+summary+'<div style="font-size:12px;color:#6b7c8f">هذا الرابط للعرض فقط ولا يتيح تعديل أو حذف الرصد.</div></div>'+
+   section('نموذج A — السجل التفصيلي',table(['النوع','من','إلى','النوع/السبب','الأيام/الدقائق','ملاحظات'],aRows))+
+   section('نموذج B — الملخص الشهري',table(['الشهر','أيام/سجلات الغياب','عدد مرات التأخير','إجمالي دقائق التأخير'],bRows))+
+   section('الإجراءات',actions.length?table(['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],actions.map(x=>[dateCell(x.date),escH(x.type||''),escH(x.text||''),escH(x.note||'')])):empty)+
+   '<div style="text-align:center;color:#6b7c8f;font-size:11px;padding:14px">تاريخ التقرير: '+portalDateHtml(new Date())+'</div>';
+ }catch(err){
+  root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>تحققي من نشر Code.gs المحدّث.</p></div>';
+ }
  return true;
 }
 const portalMode=new URLSearchParams(location.search).has('portal');
