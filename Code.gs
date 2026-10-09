@@ -19,6 +19,7 @@ function doGet(e) {
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     if(action==='all') return json_({ok:true,data:getAllData_(ss)});
     if(action==='employeeReport') return json_(employeeReport_(ss, String((e.parameter&&e.parameter.token)||'')));
+    if(action==='portalSignatures') return json_({ok:true,data:listPortalSignatures_(ss)});
     if(action==='employees') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.employees)});
     if(action==='absences') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.absences)});
     if(action==='lateness'||action==='lates') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.lateness)});
@@ -33,7 +34,14 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
-    if(action==='createEmployeeLinks'){ const incoming=(body.data&&Array.isArray(body.data.employees))?body.data.employees.filter(e=>e&&e.id&&String(e.name||'').trim()):[]; if(!incoming.length) throw new Error('قائمة الموظفات الحالية فارغة؛ لم يتم تغيير أي بيانات'); const sh=getOrCreate_(ss,CONFIG.sheets.employees); ensureHeaders_(sh,['id','name','job','createdAt']); const headers=getHeaders_(sh); const rows=incoming.map(e=>headers.map(h=>h==='id'?e.id:(h==='name'?e.name:(h==='job'?e.job:(h==='createdAt'?(e.createdAt||''):''))))); if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,sh.getLastColumn()).clearContent(); if(rows.length) sh.getRange(2,1,rows.length,headers.length).setValues(rows); SpreadsheetApp.flush(); return json_(createEmployeeLinks_(ss)); }
+    if(action==='createEmployeeLinks'){
+      const d=body.data||{};
+      return json_(createEmployeeLinks_(ss,String(d.employeeId||''),String(d.reportType||'all'),String(d.portalBaseUrl||'')));
+    }
+    if(action==='saveEmployeeSignature'){
+      const d=body.data||{};
+      return json_(saveEmployeeSignature_(ss,d));
+    }
     if(action==='sync'){
       const d=body.data||{};
       const delSuccess=[],delFailed=[];
@@ -211,52 +219,100 @@ function testConnection(){SpreadsheetApp.getUi().alert('الاتصال يعمل 
    يتم حفظ الرموز في ورقة منفصلة لتفادي حدود حجم Script Properties.
 */
 const PORTAL_SHEET_='EmployeePortalTokens';
+const PORTAL_SIGNATURES_SHEET_='EmployeeReportSignatures';
 function portalTokenSheet_(ss){
   const sh=getOrCreate_(ss,PORTAL_SHEET_);
-  if(sh.getLastRow()===0) sh.appendRow(['token','id','name','job','createdAt']);
-  else if(sh.getLastColumn()<5) sh.getRange(1,1,1,5).setValues([['token','id','name','job','createdAt']]);
+  const headers=['token','id','name','job','createdAt','reportType'];
+  if(sh.getLastRow()===0) sh.getRange(1,1,1,headers.length).setValues([headers]);
+  else sh.getRange(1,1,1,headers.length).setValues([headers]);
+  return sh;
+}
+function portalSignaturesSheet_(ss){
+  const sh=getOrCreate_(ss,PORTAL_SIGNATURES_SHEET_);
+  const headers=['id','token','empId','name','type','data','at','createdAt'];
+  if(sh.getLastRow()===0) sh.getRange(1,1,1,headers.length).setValues([headers]);
+  else sh.getRange(1,1,1,headers.length).setValues([headers]);
   return sh;
 }
 function portalRandomToken_(){
   return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
 }
-function createEmployeeLinks_(ss){
-  const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&e.name);
-  if(!employees.length) return {ok:true,links:[],message:'لا توجد موظفات في ورقة Employees'};
+function createEmployeeLinks_(ss,employeeId,reportType,portalBaseUrl){
+  const validTypes=['all','absence','late'];
+  reportType=validTypes.includes(reportType)?reportType:'all';
+  const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&e.name&&(!employeeId||String(e.id)===String(employeeId)));
+  if(!employees.length) return {ok:true,links:[],message:employeeId?'لم يتم العثور على الموظفة المحددة':'لا توجد موظفات مسجلة'};
   const sh=portalTokenSheet_(ss);
-  if(sh.getLastRow()>1) sh.deleteRows(2,sh.getLastRow()-1);
-  const now=new Date();
-  const rows=[],links=[];
+  const existing=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,6).getDisplayValues():[];
+  const replacing=new Set(employees.map(e=>String(e.id)+'|'+reportType));
+  const kept=existing.filter(r=>!replacing.has(String(r[1]||'')+'|'+String(r[5]||'all')));
+  if(sh.getLastRow()>1) sh.getRange(2,1,sh.getLastRow()-1,6).clearContent();
+  const now=new Date(),rows=[],links=[];
+  kept.forEach(r=>rows.push(r));
   employees.forEach(e=>{
     const token=portalRandomToken_();
-    rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now]);
-    links.push({id:String(e.id),name:String(e.name),url:'https://alsaabxa.github.io/IbnHisham/?portal='+encodeURIComponent(token)});
+    rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now,reportType]);
+    const safeBase=portalLinkBase_(portalBaseUrl);
+    links.push({id:String(e.id),name:String(e.name),reportType:reportType,url:safeBase+'?portal='+encodeURIComponent(token)});
   });
-  if(rows.length) sh.getRange(2,1,rows.length,5).setValues(rows);
+  if(rows.length) sh.getRange(2,1,rows.length,6).setValues(rows);
   SpreadsheetApp.flush();
-  return {ok:true,links:links,message:'تم إنشاء روابط جديدة؛ الروابط السابقة لم تعد صالحة'};
+  return {ok:true,links:links,message:'تم إنشاء الرابط المحدد؛ تم استبدال الرابط السابق لنفس الموظفة ونوع التقرير فقط'};
 }
-function employeeReport_(ss,token){
-  if(!token) return {ok:false,error:'الرابط غير مكتمل'};
-  const sh=portalTokenSheet_(ss),values=sh.getDataRange().getDisplayValues();
-  let emp=null;
+
+function portalLinkBase_(candidate){
+  const fallback='https://alsaabxa.github.io/IbnHisham/';
+  try{
+    const u=new URL(String(candidate||''));
+    const host=String(u.hostname||'').toLowerCase();
+    const allowed=host==='alsaabxa.github.io'||host==='ibnhisham.pages.dev'||/^[a-z0-9-]+\.ibnhisham\.pages\.dev$/.test(host);
+    if(!allowed||u.protocol!=='https:')return fallback;
+    return u.origin+u.pathname.replace(/[^/]*$/,'');
+  }catch(e){return fallback;}
+}
+
+function findPortalToken_(ss,token){
+  if(!token)return null;
+  const values=portalTokenSheet_(ss).getDataRange().getDisplayValues();
   for(let i=1;i<values.length;i++){
-    if(String(values[i][0]||'')===token){
-      emp={id:String(values[i][1]||''),name:String(values[i][2]||'').trim(),job:String(values[i][3]||'').trim()};
-      break;
+    if(String(values[i][0]||'')===String(token)){
+      return {token:String(values[i][0]),id:String(values[i][1]||''),name:String(values[i][2]||'').trim(),job:String(values[i][3]||'').trim(),reportType:String(values[i][5]||'all')||'all'};
     }
   }
-  if(!emp) return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.'};
+  return null;
+}
+function saveEmployeeSignature_(ss,data){
+  const token=String(data.token||'');
+  const emp=findPortalToken_(ss,token);
+  if(!emp)return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. اطلبي رابطًا جديدًا من الإدارة.'};
+  const reportType=String(data.reportType||'all');
+  if(reportType!==emp.reportType)return {ok:false,error:'نوع التقرير لا يطابق الرابط المخصص.'};
+  const image=String(data.data||'');
+  if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image))return {ok:false,error:'بيانات التوقيع غير صالحة.'};
+  if(image.length>1500000)return {ok:false,error:'حجم التوقيع كبير؛ امسحي مساحة التوقيع وأعيدي التوقيع بحجم أصغر.'};
+  const sh=portalSignaturesSheet_(ss),now=new Date().toISOString();
+  upsertOne_(ss,PORTAL_SIGNATURES_SHEET_,{id:token,token:token,empId:emp.id,name:emp.name,type:reportType,data:image,at:now,createdAt:now});
+  SpreadsheetApp.flush();
+  return {ok:true,saved:true,at:now,message:'تم حفظ التوقيع بنجاح'};
+}
+function listPortalSignatures_(ss){
+  return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).map(r=>({name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||''})).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+function employeeReport_(ss,token){
+  const emp=findPortalToken_(ss,token);
+  if(!emp)return {ok:false,error:token?'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.':'الرابط غير مكتمل'};
   const belongs=x=>{
     const id=String(x.empId??x.employeeId??x.employeeID??x.employee_id??'').trim();
     if(id && emp.id && id===emp.id) return true;
     return String(x.name??x.employeeName??x.employee_name??'').trim()===emp.name;
   };
-  const absences=readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
-  const lates=readSheet_(ss,CONFIG.sheets.lateness).filter(belongs);
+  const absences=emp.reportType==='late'?[]:readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
+  const lates=emp.reportType==='absence'?[]:readSheet_(ss,CONFIG.sheets.lateness).filter(belongs);
   const actions=readSheet_(ss,CONFIG.sheets.actions).filter(belongs);
   const dateVal=x=>String(x.date||x.from||x.reportDate||x.created||'');
   const desc=(a,b)=>dateVal(b).localeCompare(dateVal(a));
   absences.sort(desc); lates.sort(desc); actions.sort(desc);
-  return {ok:true,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions}};
+  const signatures=readSheet_(ss,PORTAL_SIGNATURES_SHEET_);
+  const signature=signatures.find(x=>String(x.token||x.id||'')===String(token))||null;
+  return {ok:true,reportType:emp.reportType,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions,signature:signature?{data:signature.data,at:signature.at,type:signature.type}:null}};
 }
