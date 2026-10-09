@@ -18,6 +18,7 @@ function doGet(e) {
     if(action==='ping') return json_({ok:true,service:'IbnHisham Attendance API',message:'الاتصال يعمل بنجاح',time:new Date().toISOString()});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     if(action==='all') return json_({ok:true,data:getAllData_(ss)});
+    if(action==='employeeReport') return json_(employeeReport_(ss, String((e.parameter&&e.parameter.token)||'')));
     if(action==='employees') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.employees)});
     if(action==='absences') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.absences)});
     if(action==='lateness'||action==='lates') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.lateness)});
@@ -32,6 +33,7 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
+    if(action==='createEmployeeLinks') return json_(createEmployeeLinks_(ss));
     if(action==='sync'){
       const d=body.data||{};
       const delSuccess=[],delFailed=[];
@@ -204,3 +206,46 @@ function onOpen(){
   SpreadsheetApp.getUi().createMenu('منصة ابن هشام').addItem('تهيئة الجداول','setupSheets').addItem('اختبار الاتصال','testConnection').addToUi();
 }
 function testConnection(){SpreadsheetApp.getUi().alert('الاتصال يعمل — منصة ابن هشام');}
+
+
+/* ===== روابط تقارير الموظفات: قراءة فقط، دون مفتاح إداري ===== */
+function portalTokenMap_(){
+  const props=PropertiesService.getScriptProperties();
+  try{return JSON.parse(props.getProperty('EMPLOYEE_PORTAL_TOKENS_V1')||'{}')||{};}catch(e){return {};}
+}
+function savePortalTokenMap_(map){
+  PropertiesService.getScriptProperties().setProperty('EMPLOYEE_PORTAL_TOKENS_V1',JSON.stringify(map));
+}
+function portalRandomToken_(){
+  return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
+}
+function createEmployeeLinks_(ss){
+  const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&e.name);
+  if(!employees.length) return {ok:true,links:[],message:'لا توجد موظفات لإنشاء الروابط'};
+  const map={};
+  const base='https://alsaabxa.github.io/IbnHisham/';
+  const links=employees.map(e=>{
+    const token=portalRandomToken_();
+    map[token]={id:String(e.id),name:String(e.name||'').trim(),job:String(e.job||'').trim()};
+    return {id:String(e.id),name:String(e.name),url:base+'?portal='+encodeURIComponent(token)};
+  });
+  savePortalTokenMap_(map);
+  return {ok:true,links:links,message:'تم إنشاء روابط جديدة؛ الروابط السابقة لم تعد صالحة'};
+}
+function employeeReport_(ss,token){
+  if(!token) return {ok:false,error:'الرابط غير مكتمل'};
+  const map=portalTokenMap_(),emp=map[token];
+  if(!emp) return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. تواصلي مع الإدارة للحصول على رابط جديد.'};
+  const belongs=x=>{
+    const id=String(x.empId??x.employeeId??x.employeeID??x.employee_id??'').trim();
+    if(id && emp.id && id===String(emp.id)) return true;
+    return String(x.name??x.employeeName??x.employee_name??'').trim()===emp.name;
+  };
+  const absences=readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
+  const lates=readSheet_(ss,CONFIG.sheets.lateness).filter(belongs);
+  const actions=readSheet_(ss,CONFIG.sheets.actions).filter(belongs);
+  const dateVal=x=>String(x.date||x.from||x.reportDate||x.created||'');
+  const desc=(a,b)=>dateVal(b).localeCompare(dateVal(a));
+  absences.sort(desc); lates.sort(desc); actions.sort(desc);
+  return {ok:true,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions}};
+}
