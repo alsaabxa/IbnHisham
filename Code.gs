@@ -5,7 +5,7 @@ const CONFIG = {
     employees: 'الموظفات',
     absences: 'الغياب',
     lateness: 'التأخير',
-    signatures: 'التوقيعات',
+    signatures: 'Signatures',
     settings: 'الإعدادات',
     actions: 'الإجراءات'
   }
