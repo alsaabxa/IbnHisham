@@ -36,7 +36,7 @@ function doPost(e){
     const action=body.action||'save';
     if(action==='createEmployeeLinks'){
       const d=body.data||{};
-      return json_(createEmployeeLinks_(ss,String(d.employeeId||''),String(d.reportType||'all')));
+      return json_(createEmployeeLinks_(ss,String(d.employeeId||''),String(d.reportType||'all'),String(d.portalBaseUrl||'')));
     }
     if(action==='saveEmployeeSignature'){
       const d=body.data||{};
@@ -237,7 +237,7 @@ function portalSignaturesSheet_(ss){
 function portalRandomToken_(){
   return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
 }
-function createEmployeeLinks_(ss,employeeId,reportType){
+function createEmployeeLinks_(ss,employeeId,reportType,portalBaseUrl){
   const validTypes=['all','absence','late'];
   reportType=validTypes.includes(reportType)?reportType:'all';
   const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&e.name&&(!employeeId||String(e.id)===String(employeeId)));
@@ -252,12 +252,25 @@ function createEmployeeLinks_(ss,employeeId,reportType){
   employees.forEach(e=>{
     const token=portalRandomToken_();
     rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now,reportType]);
-    links.push({id:String(e.id),name:String(e.name),reportType:reportType,url:'https://alsaabxa.github.io/IbnHisham/?portal='+encodeURIComponent(token)});
+    const safeBase=portalLinkBase_(portalBaseUrl);
+    links.push({id:String(e.id),name:String(e.name),reportType:reportType,url:safeBase+'?portal='+encodeURIComponent(token)});
   });
   if(rows.length) sh.getRange(2,1,rows.length,6).setValues(rows);
   SpreadsheetApp.flush();
   return {ok:true,links:links,message:'تم إنشاء الرابط المحدد؛ تم استبدال الرابط السابق لنفس الموظفة ونوع التقرير فقط'};
 }
+
+function portalLinkBase_(candidate){
+  const fallback='https://alsaabxa.github.io/IbnHisham/';
+  try{
+    const u=new URL(String(candidate||''));
+    const host=String(u.hostname||'').toLowerCase();
+    const allowed=host==='alsaabxa.github.io'||host==='ibnhisham.pages.dev'||/^[a-z0-9-]+\.ibnhisham\.pages\.dev$/.test(host);
+    if(!allowed||u.protocol!=='https:')return fallback;
+    return u.origin+u.pathname.replace(/[^/]*$/,'');
+  }catch(e){return fallback;}
+}
+
 function findPortalToken_(ss,token){
   if(!token)return null;
   const values=portalTokenSheet_(ss).getDataRange().getDisplayValues();
