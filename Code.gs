@@ -81,14 +81,13 @@ function doPost(e){
 function setupSheets(){
   if(!CONFIG.spreadsheetId) throw new Error('ضع spreadsheetId أولاً');
   const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
-  const headers={
-    Employees:['id','name','job','createdAt'],
-    Absences:['id','empId','name','job','type','month','from','to','days','ref','reportDate','place','note','created'],
-    Lateness:['id','empId','name','job','date','arrival','start','minutes','reason','note','created'],
-    Signatures:['id','empId','name','type','data','at','createdAt'],
-    Settings:['key','value','updatedAt'],
-    Actions:['id','empId','name','job','date','type','text','note','created']
-  };
+  const headers={};
+  headers[CONFIG.sheets.employees]=['id','name','job','createdAt'];
+  headers[CONFIG.sheets.absences]=['id','empId','name','job','type','month','from','to','days','ref','reportDate','place','note','created'];
+  headers[CONFIG.sheets.lateness]=['id','empId','name','job','date','arrival','start','minutes','reason','note','created'];
+  headers[CONFIG.sheets.signatures]=['id','empId','name','type','data','at','createdAt'];
+  headers[CONFIG.sheets.settings]=['key','value','updatedAt'];
+  headers[CONFIG.sheets.actions]=['id','empId','name','job','date','type','text','note','created'];
   Object.keys(headers).forEach(k=>{const sh=getOrCreate_(ss,k);ensureHeaders_(sh,headers[k]);});
   return 'تم تهيئة جداول منصة ابن هشام';
 }
