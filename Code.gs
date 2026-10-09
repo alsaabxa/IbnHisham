@@ -2,12 +2,12 @@ const CONFIG = {
   spreadsheetId: '1W8yxCurpAbKqfSO6q3GNUilFxPCGQQ6GXU9ixD6gl3I',
   timezone: 'Asia/Riyadh',
   sheets: {
-    employees: 'Employees',
-    absences: 'Absences',
-    lateness: 'Lateness',
-    signatures: 'Signatures',
-    settings: 'Settings',
-    actions: 'Actions'
+    employees: 'الموظفات',
+    absences: 'الغياب',
+    lateness: 'التأخير',
+    signatures: 'التوقيعات',
+    settings: 'الإعدادات',
+    actions: 'الإجراءات'
   }
 };
 
