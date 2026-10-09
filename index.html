@@ -673,7 +673,7 @@ async function createEmployeePortalLinks(){
   status.textContent='جارٍ الاتصال بـ Google Sheets وإنشاء الروابط...';
   box.innerHTML='';
   try{
-    const r=await apiPost('createEmployeeLinks',{});
+    const r=await apiPost('createEmployeeLinks',{employees:state.employees});
     if(!r||!r.ok){
       status.textContent='فشل إنشاء الروابط: '+((r&&r.error)||'لم تصل استجابة من Apps Script. أعيدي نشر Code.gs كإصدار جديد.');
       return;
