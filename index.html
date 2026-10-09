@@ -135,13 +135,10 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <section id="employees" class="section"><div class="card"><h2>بطاقة الموظفة — تعديل البيانات</h2><div class="grid"><div class="field"><label>اختيار الموظفة</label><select id="editEmpCard" onchange="loadEmpCard()"></select></div><div class="field"><label>اسم الموظفة</label><input id="editEmpName"></div><div class="field"><label>المسمى الوظيفي</label><select id="editEmpJob"></select></div></div><div class="actions"><button class="btn primary" onclick="saveEmpCard()">💾 حفظ وتفعيل التعديل</button></div><div class="mini" style="margin-top:8px">يُحفظ التعديل محليًا ويُزامن مع Google Sheets، ولا يعود الاسم القديم بعد تحديث الصفحة.</div></div><div class="card"><h2>إدارة الموظفات</h2><div class="grid"><div class="field"><label>اسم الموظفة</label><input id="empName"></div><div class="field"><label>المسمى الوظيفي</label><select id="empJob"></select></div></div><div class="actions"><button class="btn primary" onclick="addEmployee()">إضافة موظفة</button></div><div class="card" style="margin-top:18px;background:#f9fbfc"><h2>إضافة أسماء دفعة واحدة</h2><div class="field"><label>اسم في كل سطر</label><textarea id="bulkNames" rows="6"></textarea></div><div class="field" style="margin-top:10px"><label>المسمى الوظيفي للجميع</label><select id="bulkJob"></select></div><div class="actions"><button class="btn secondary" onclick="bulkAdd()">إضافة الأسماء</button></div></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>م</th><th>الاسم</th><th>المسمى</th><th>إجراء</th></tr></thead><tbody id="empTable"></tbody></table></div></div></section>
 <section id="reports" class="section"><div class="card no-print"><h2>التقارير والطباعة</h2><div class="grid"><div class="field"><label>الموظفة</label><select id="repEmp"></select></div><div class="field"><label>نوع التقرير</label><select id="repType" onchange="updRepHint()"><option value="A">A — النموذج الرسمي</option><option value="B">B — التقرير التفصيلي</option></select></div><div class="field"><label>القسم</label><select id="repSection"><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>الفترة</label><select id="repPeriod" onchange="setDefaultReportDates()"><option value="week">أسبوعي</option><option value="month" selected>شهري</option><option value="year">سنوي</option></select></div><div class="field"><label>من تاريخ (هجري)</label><div class="hp" data-id="repDateFrom"></div></div><div class="field"><label>إلى تاريخ (هجري)</label><div class="hp" data-id="repDateTo"></div></div></div><div id="repHintA" class="mini" style="margin-top:10px">النموذج A سنوي: يعرض 12 شهرًا متحركًا بدءًا من شهر «من تاريخ»، وينتهي بالشهر نفسه من السنة التالية.</div><div class="actions"><button class="btn primary" onclick="renderReport()">عرض التقرير</button><button class="btn gold" onclick="printReport()">🖨️ طباعة PDF</button><label class="chk"><input type="checkbox" id="onePagePrint" checked> ضغط التقرير في صفحة واحدة لكل موظفة</label></div></div><div id="report" class="report-box"><div class="empty">اختر الموظفة ونوع التقرير والفترة ثم اضغط «عرض التقرير».</div></div></section>
 <section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label>بداية الدوام الشتوي</label><input id="settingStart" type="time"></div><div class="field"><label>بداية الدوام الصيفي</label><input id="settingStartSummer" type="time"></div><div class="field"><label>اعتماد التوقيت في احتساب التأخير</label><select id="seasonMode"><option value="auto">تلقائي حسب أشهر الدوام الصيفي</option><option value="winter">شتوي دائمًا</option><option value="summer">صيفي دائمًا</option></select></div><div></div><div class="field"><label>الدوام الصيفي من شهر (هجري)</label><select id="summerFrom"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>الدوام الصيفي إلى شهر (هجري)</label><select id="summerTo"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
-<div class="notice">ينشئ النظام رابطًا عشوائيًا لكل موظفة. لا تشاركي المفتاح الإداري مع الموظفات، ولا ترسلي رابط موظفة إلى غيرها. عند إعادة إنشاء الروابط تُستبدل الروابط السابقة للموظفات.</div>
-<div class="grid" style="margin-top:12px">
-<div class="field"><label for="portalAdminKey">المفتاح الإداري السري</label><input id="portalAdminKey" type="password" autocomplete="off" placeholder="أدخلي المفتاح الذي حفظته في Script properties"></div>
-</div>
+<div class="notice">إنشاء روابط خاصة لعرض تقارير الموظفة فقط. لا تشاركي رابط الموظفة مع غيرها. عند إنشاء روابط جديدة تُلغى الروابط السابقة.</div>
 <div class="actions"><button class="btn primary" type="button" onclick="createEmployeePortalLinks()">إنشاء روابط الموظفات</button><button class="btn secondary" type="button" onclick="clearPortalLinks()">إخفاء الروابط من الشاشة</button><span id="portalLinksStatus" class="muted" aria-live="polite"></span></div>
 <div id="portalLinksResult" class="table-wrap" style="margin-top:12px"></div>
-<p class="muted">ملاحظة: يجب نشر نسخة Code.gs التي تحتوي على مسار createEmployeeLinks، وإعداد PORTAL_ADMIN_KEY في Script properties أولًا. هذه الواجهة لا تحفظ المفتاح في المتصفح.</p>
+<p class="muted">لا يتطلب إنشاء الروابط مفتاحًا إداريًا. احتفظي بالروابط في مكان آمن؛ من يملك الرابط يستطيع فتح التقرير المرتبط به.</p>
 </div>
 <div class="card"><h2>الوظائف المعتمدة</h2><div class="muted">مديرة، وكيلة تعليمية، وكيلة شؤون طلاب / ات، موجهة طلابية، إدارية، معلمة، مستخدمة / مستخدم</div></div></section>
 <section id="record-management" class="section"><div class="card"><h2>إدارة الرصد وحذف السجلات</h2><div class="notice">هذه الصفحة مخصصة لإدارة سجلات الغياب والتأخير. يمكنك البحث، تعديل السجل أو حذفه، وتُحفظ التعديلات في المنصة وGoogle Sheets.</div><div id="recordEditor" class="card" style="display:none;margin-top:14px;background:#f9fbfc"><h2 id="recordEditorTitle">تعديل الرصد</h2><div id="recordEditorFields" class="grid"></div><div class="actions"><button class="btn primary" onclick="saveRecordEdit()">💾 حفظ التعديل</button><button class="btn secondary" onclick="cancelRecordEdit()">إلغاء</button></div></div><div class="grid" style="margin-top:14px"><div class="field"><label>نوع السجل</label><select id="manageType" onchange="renderRecordManagement()"><option value="all">كل السجلات</option><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>بحث بالاسم أو رقم السجل</label><input id="manageSearch" oninput="renderRecordManagement()" placeholder="اكتب الاسم أو الرقم"></div></div><div class="actions"><button class="btn danger" onclick="deleteAllRecords('absence')">حذف جميع سجلات الغياب</button><button class="btn danger" onclick="deleteAllRecords('late')">حذف جميع سجلات التأخير</button></div><div id="manageSummary" class="record-summary"></div><div id="recordManagementTable" class="table-wrap" style="margin-top:12px"></div></div></section>
@@ -666,23 +663,18 @@ _g('report').innerHTML=repHead()+'<div class="report-head"><h2>'+title+' — A</
 function clearPortalLinks(){
   const box=document.getElementById('portalLinksResult');
   const status=document.getElementById('portalLinksStatus');
-  const key=document.getElementById('portalAdminKey');
   if(box)box.innerHTML='';
   if(status)status.textContent='تم إخفاء الروابط من الشاشة.';
-  if(key)key.value='';
 }
 function createEmployeePortalLinks(){
-  const keyEl=document.getElementById('portalAdminKey');
   const status=document.getElementById('portalLinksStatus');
   const box=document.getElementById('portalLinksResult');
-  const adminKey=(keyEl&&keyEl.value||'').trim();
-  if(!adminKey){toast('أدخل المفتاح الإداري أولًا');return}
   if(!confirm('سيتم إنشاء روابط جديدة للموظفات واستبدال صلاحية الروابط السابقة. هل تريد المتابعة؟'))return;
   status.textContent='جارٍ إنشاء الروابط...';
   box.innerHTML='';
-  apiPost('createEmployeeLinks',{adminKey:adminKey}).then(r=>{
+  apiPost('createEmployeeLinks',{}).then(r=>{
     if(!r||!r.ok){
-      status.textContent=(r&&r.error)||'تعذر إنشاء الروابط. تأكدي من نشر Code.gs وإعداد المفتاح.';
+      status.textContent=(r&&r.error)||'تعذر إنشاء الروابط. تأكدي من نشر Code.gs المحدّث.';
       return;
     }
     const links=Array.isArray(r.links)?r.links:[];
@@ -711,7 +703,6 @@ function createEmployeePortalLinks(){
     });
     box.appendChild(table);
     status.textContent='تم إنشاء '+links.length+' رابطًا. احفظيها في مكان آمن الآن؛ لن يُعاد عرض الرموز السرية عند الطلب لاحقًا.';
-    if(keyEl)keyEl.value='';
   }).catch(()=>{
     status.textContent='تعذر الاتصال. تحققي من رابط Apps Script وإصدار النشر.';
   });
@@ -728,6 +719,28 @@ function renderActions(){const el=_g('actionsTable');if(!el)return;if(!state.act
 function deleteAction(id){const p=prompt('أدخل الرقم السري لحذف الإجراء:');if(p!=='1234')return toast('الرقم السري غير صحيح');if(!confirm('تأكيد حذف الإجراء؟'))return;state.actions=state.actions.filter(x=>String(x.id)!==String(id));state.pendingDeletes.push({type:'action',id:String(id)});save();renderActions();toast('تم الحذف بنجاح')}
 function saveSignature(){const id=document.getElementById('sigEmp').value;if(!id)return toast('اختر الموظفة');const c=document.getElementById('sigCanvas'),data=c.toDataURL('image/png');state.signatures[id]={data:data,type:document.getElementById('sigType').value,at:new Date().toISOString()};save();document.getElementById('sigStatus').textContent='✓ تم الاطلاع والتوقيع — '+new Date().toLocaleString('ar-SA');toast('تم حفظ التوقيع')}
 function tick(){const d=new Date();document.getElementById('clock').innerHTML=fmtHijri(d)+'<br><b>'+new Intl.DateTimeFormat('ar-SA',{dateStyle:'full',timeStyle:'short'}).format(d)+'</b>'}
-fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();
+async function initEmployeePortal(){
+ const token=new URLSearchParams(location.search).get('portal');
+ if(!token)return false;
+ document.body.innerHTML='<main id="employeePortalRoot" dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:1100px;margin:24px auto;padding:16px;color:#172b3a"><h1 style="color:#0f2a43">التقارير الخاصة بالموظفة</h1><p>جارٍ تحميل التقرير...</p></main>';
+ const root=document.getElementById('employeePortalRoot');
+ try{
+  const url=(state.settings&&state.settings.apiUrl||'').trim();
+  const response=await fetch(url+'?action=employeeReport&token='+encodeURIComponent(token),{cache:'no-store'});
+  const result=await response.json();
+  if(!result||!result.ok){root.innerHTML='<h1>تعذر فتح التقرير</h1><p>'+escH(result&&result.error||'تعذر الاتصال بالخدمة')+'</p>';return true;}
+  const e=result.employee,d=result.data||{};
+  const table=(title,rows,headers,fields)=>'<section style="margin:18px 0;padding:16px;border:1px solid #dce5eb;border-radius:14px"><h2>'+title+' ('+rows.length+')</h2>'+(rows.length?'<div style="overflow:auto"><table style="border-collapse:collapse;width:100%"><thead><tr>'+headers.map(h=>'<th style="background:#eef4f7;padding:9px;border:1px solid #dce5eb;text-align:right">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(x=>'<tr>'+fields.map(k=>'<td style="padding:9px;border:1px solid #dce5eb">'+escH(x[k]??'')+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'<p>لا توجد سجلات.</p>')+'</section>';
+  root.innerHTML='<h1 style="color:#0f2a43">التقارير الخاصة بالموظفة</h1><p><b>الاسم:</b> '+escH(e.name)+'　 <b>الوظيفة:</b> '+escH(e.job||'')+'</p><p>هذه صفحة عرض فقط، ولا تتيح تعديل أو حذف السجلات.</p>'+
+   table('الغياب',d.absences||[],['التاريخ من','إلى','نوع الغياب','الأيام','الشهر','ملاحظات'],['from','to','type','days','month','note'])+
+   table('التأخير',d.lates||[],['التاريخ','بداية الدوام','وقت الحضور','دقائق التأخير','السبب'],['date','start','arrival','minutes','reason'])+
+   table('الإجراءات',d.actions||[],['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],['date','type','text','note'])+
+   '<p style="color:#6b7c8f;font-size:12px">منصة ابن هشام للطفولة المبكرة</p>';
+ }catch(err){root.innerHTML='<h1>تعذر فتح التقرير</h1><p>تحققي من نشر Code.gs المحدّث.</p>';}
+ return true;
+}
+const portalMode=new URLSearchParams(location.search).has('portal');
+if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();}
+
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingStartSummer','seasonMode','summerFrom','summerTo','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
 </script></body></html>
