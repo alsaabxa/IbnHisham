@@ -208,37 +208,49 @@ function onOpen(){
 function testConnection(){SpreadsheetApp.getUi().alert('الاتصال يعمل — منصة ابن هشام');}
 
 
-/* ===== روابط تقارير الموظفات: قراءة فقط، دون مفتاح إداري ===== */
-function portalTokenMap_(){
-  const props=PropertiesService.getScriptProperties();
-  try{return JSON.parse(props.getProperty('EMPLOYEE_PORTAL_TOKENS_V1')||'{}')||{};}catch(e){return {};}
-}
-function savePortalTokenMap_(map){
-  PropertiesService.getScriptProperties().setProperty('EMPLOYEE_PORTAL_TOKENS_V1',JSON.stringify(map));
+/* ===== روابط تقارير الموظفات: قراءة فقط، دون مفتاح إداري =====
+   يتم حفظ الرموز في ورقة منفصلة لتفادي حدود حجم Script Properties.
+*/
+const PORTAL_SHEET_='EmployeePortalTokens';
+function portalTokenSheet_(ss){
+  const sh=getOrCreate_(ss,PORTAL_SHEET_);
+  if(sh.getLastRow()===0) sh.appendRow(['token','id','name','job','createdAt']);
+  else if(sh.getLastColumn()<5) sh.getRange(1,1,1,5).setValues([['token','id','name','job','createdAt']]);
+  return sh;
 }
 function portalRandomToken_(){
   return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');
 }
 function createEmployeeLinks_(ss){
   const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&e.name);
-  if(!employees.length) return {ok:true,links:[],message:'لا توجد موظفات لإنشاء الروابط'};
-  const map={};
-  const base='https://alsaabxa.github.io/IbnHisham/';
-  const links=employees.map(e=>{
+  if(!employees.length) return {ok:true,links:[],message:'لا توجد موظفات في ورقة Employees'};
+  const sh=portalTokenSheet_(ss);
+  if(sh.getLastRow()>1) sh.deleteRows(2,sh.getLastRow()-1);
+  const now=new Date();
+  const rows=[],links=[];
+  employees.forEach(e=>{
     const token=portalRandomToken_();
-    map[token]={id:String(e.id),name:String(e.name||'').trim(),job:String(e.job||'').trim()};
-    return {id:String(e.id),name:String(e.name),url:base+'?portal='+encodeURIComponent(token)};
+    rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now]);
+    links.push({id:String(e.id),name:String(e.name),url:'https://alsaabxa.github.io/IbnHisham/?portal='+encodeURIComponent(token)});
   });
-  savePortalTokenMap_(map);
+  if(rows.length) sh.getRange(2,1,rows.length,5).setValues(rows);
+  SpreadsheetApp.flush();
   return {ok:true,links:links,message:'تم إنشاء روابط جديدة؛ الروابط السابقة لم تعد صالحة'};
 }
 function employeeReport_(ss,token){
   if(!token) return {ok:false,error:'الرابط غير مكتمل'};
-  const map=portalTokenMap_(),emp=map[token];
-  if(!emp) return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. تواصلي مع الإدارة للحصول على رابط جديد.'};
+  const sh=portalTokenSheet_(ss),values=sh.getDataRange().getDisplayValues();
+  let emp=null;
+  for(let i=1;i<values.length;i++){
+    if(String(values[i][0]||'')===token){
+      emp={id:String(values[i][1]||''),name:String(values[i][2]||'').trim(),job:String(values[i][3]||'').trim()};
+      break;
+    }
+  }
+  if(!emp) return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.'};
   const belongs=x=>{
     const id=String(x.empId??x.employeeId??x.employeeID??x.employee_id??'').trim();
-    if(id && emp.id && id===String(emp.id)) return true;
+    if(id && emp.id && id===emp.id) return true;
     return String(x.name??x.employeeName??x.employee_name??'').trim()===emp.name;
   };
   const absences=readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
