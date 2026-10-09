@@ -112,7 +112,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
-  const UI_VERSION='2026-10-09-01';
+  const UI_VERSION='2026-10-09-sign-01';
   const KEY='ibnhisham_ui_version';
   try{
     const old=localStorage.getItem(KEY);
@@ -127,7 +127,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 </script>
 </head>
 <body>
-<div class="app"><header class="side"><button class="menu-toggle" id="menuBtn" type="button" onclick="toggleMenu()" aria-label="القائمة" aria-expanded="false">☰</button><div class="brand">منصة رصد الغياب والتأخير<small>مدرسة ابن هشام للطفولة المبكرة</small></div><nav class="nav" id="mainNav"><button class="active" data-go="home">🏠 الرئيسية</button><button data-go="absence">📝 رصد الغياب</button><button data-go="late">⏰ رصد التأخير</button><button data-go="employees">👩‍💼 الموظفات</button><button data-go="reports">📊 التقارير</button><button data-go="record-management">🗂️ إدارة الرصد</button><button data-go="settings">⚙️ الإعدادات</button></nav></header>
+<div class="app"><header class="side"><button class="menu-toggle" id="menuBtn" type="button" onclick="toggleMenu()" aria-label="القائمة" aria-expanded="false">☰</button><div class="brand">منصة رصد الغياب والتأخير<small>مدرسة ابن هشام للطفولة المبكرة</small></div><nav class="nav" id="mainNav"><button class="active" data-go="home">🏠 الرئيسية</button><button data-go="absence">📝 رصد الغياب</button><button data-go="late">⏰ رصد التأخير</button><button data-go="employees">👩‍💼 الموظفات</button><button data-go="reports">📊 التقارير</button><button data-go="record-management">🗂️ إدارة الرصد</button><button data-go="settings">⚙️ الإعدادات</button><button data-go="sign">✍️ التوقيع الإلكتروني</button></nav></header>
 <main class="main"><div class="top"><div class="title"><h1 id="pageTitle">لوحة المتابعة</h1><p>منصة رصد الغياب والتأخير للموظفات</p></div><div class="clock" id="clock"></div></div>
 <section id="home" class="section active"><div class="card home-menu" style="margin-top:0"><h2>القائمة الرئيسية</h2><div class="quick"><button onclick="nav('absence')"><span>📝</span>رصد غياب</button><button onclick="nav('late')"><span>⏰</span>رصد تأخير</button><button onclick="nav('reports')"><span>📊</span>التقارير والطباعة</button><button onclick="nav('employees')"><span>👩‍💼</span>الموظفات</button><button onclick="nav('record-management')"><span>🗂️</span>إدارة الرصد</button><button onclick="nav('settings')"><span>⚙️</span>الإعدادات</button></div></div><div class="cards" style="margin-top:16px"><div class="stat"><b id="sEmp">0</b><span>إجمالي الموظفات</span></div><div class="stat"><b id="sAbs">0</b><span>سجلات الغياب</span></div><div class="stat"><b id="sLate">0</b><span>سجلات التأخير</span></div><div class="stat"><b id="sMin">0</b><span>دقائق التأخير</span></div></div><div class="card"><h2>آخر العمليات</h2><div id="recent" class="empty">لا توجد سجلات بعد.</div></div></section>
 <section id="absence" class="section"><div class="card"><h2>رصد الغياب — النموذج B</h2><div class="grid"><div class="field"><label>الموظفة</label><select id="absEmp" onchange="syncEmp('abs')"></select></div><div class="field"><label>المسمى الوظيفي</label><input id="absJob" readonly></div><div class="field"><label>نوع الغياب</label><select id="absType"><option>إجازة مرضية</option><option>إجازة اضطرارية</option><option>إجازة أمومة</option><option>إجازة رعاية مولود</option><option>إجازة أخرى</option><option>بدون عذر</option></select></div><div class="field"><label>الشهر الهجري</label><select id="absMonth"><option>رجب</option><option>شعبان</option><option>رمضان</option><option>شوال</option><option>ذو القعدة</option><option>ذو الحجة</option><option>محرم</option><option>ربيع الأول</option><option>ربيع الآخره</option><option>جمادى الأولى</option><option>جمادى الآخرة</option><option>رجب</option></select></div></div><div id="absenceItems" style="margin-top:15px"></div><button class="btn secondary" onclick="addAbsenceItem()">+ إضافة غياب آخر في نفس الشهر</button><div class="actions"><button class="btn primary" onclick="saveAbsences()">حفظ سجل الغياب</button></div></div></section>
@@ -135,12 +135,27 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <section id="employees" class="section"><div class="card"><h2>بطاقة الموظفة — تعديل البيانات</h2><div class="grid"><div class="field"><label>اختيار الموظفة</label><select id="editEmpCard" onchange="loadEmpCard()"></select></div><div class="field"><label>اسم الموظفة</label><input id="editEmpName"></div><div class="field"><label>المسمى الوظيفي</label><select id="editEmpJob"></select></div></div><div class="actions"><button class="btn primary" onclick="saveEmpCard()">💾 حفظ وتفعيل التعديل</button></div><div class="mini" style="margin-top:8px">يُحفظ التعديل محليًا ويُزامن مع Google Sheets، ولا يعود الاسم القديم بعد تحديث الصفحة.</div></div><div class="card"><h2>إدارة الموظفات</h2><div class="grid"><div class="field"><label>اسم الموظفة</label><input id="empName"></div><div class="field"><label>المسمى الوظيفي</label><select id="empJob"></select></div></div><div class="actions"><button class="btn primary" onclick="addEmployee()">إضافة موظفة</button></div><div class="card" style="margin-top:18px;background:#f9fbfc"><h2>إضافة أسماء دفعة واحدة</h2><div class="field"><label>اسم في كل سطر</label><textarea id="bulkNames" rows="6"></textarea></div><div class="field" style="margin-top:10px"><label>المسمى الوظيفي للجميع</label><select id="bulkJob"></select></div><div class="actions"><button class="btn secondary" onclick="bulkAdd()">إضافة الأسماء</button></div></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>م</th><th>الاسم</th><th>المسمى</th><th>إجراء</th></tr></thead><tbody id="empTable"></tbody></table></div></div></section>
 <section id="reports" class="section"><div class="card no-print"><h2>التقارير والطباعة</h2><div class="grid"><div class="field"><label>الموظفة</label><select id="repEmp"></select></div><div class="field"><label>نوع التقرير</label><select id="repType" onchange="updRepHint()"><option value="A">A — النموذج الرسمي</option><option value="B">B — التقرير التفصيلي</option></select></div><div class="field"><label>القسم</label><select id="repSection"><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>الفترة</label><select id="repPeriod" onchange="setDefaultReportDates()"><option value="week">أسبوعي</option><option value="month" selected>شهري</option><option value="year">سنوي</option></select></div><div class="field"><label>من تاريخ (هجري)</label><div class="hp" data-id="repDateFrom"></div></div><div class="field"><label>إلى تاريخ (هجري)</label><div class="hp" data-id="repDateTo"></div></div></div><div id="repHintA" class="mini" style="margin-top:10px">النموذج A سنوي: يعرض 12 شهرًا متحركًا بدءًا من شهر «من تاريخ»، وينتهي بالشهر نفسه من السنة التالية.</div><div class="actions"><button class="btn primary" onclick="renderReport()">عرض التقرير</button><button class="btn gold" onclick="printReport()">🖨️ طباعة PDF</button><label class="chk"><input type="checkbox" id="onePagePrint" checked> ضغط التقرير في صفحة واحدة لكل موظفة</label></div></div><div id="report" class="report-box"><div class="empty">اختر الموظفة ونوع التقرير والفترة ثم اضغط «عرض التقرير».</div></div></section>
 <section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label>بداية الدوام الشتوي</label><input id="settingStart" type="time"></div><div class="field"><label>بداية الدوام الصيفي</label><input id="settingStartSummer" type="time"></div><div class="field"><label>اعتماد التوقيت في احتساب التأخير</label><select id="seasonMode"><option value="auto">تلقائي حسب أشهر الدوام الصيفي</option><option value="winter">شتوي دائمًا</option><option value="summer">صيفي دائمًا</option></select></div><div></div><div class="field"><label>الدوام الصيفي من شهر (هجري)</label><select id="summerFrom"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>الدوام الصيفي إلى شهر (هجري)</label><select id="summerTo"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
-<div class="notice">إنشاء روابط خاصة لعرض تقارير الموظفة فقط. لا تشاركي رابط الموظفة مع غيرها. عند إنشاء روابط جديدة تُلغى الروابط السابقة.</div>
+<div class="notice">إنشاء روابط خاصة لعرض تقارير الموظفة فقط، مع إمكانية اعتماد التقرير بالتوقيع الإلكتروني. لا تشاركي رابط الموظفة مع غيرها. عند إنشاء روابط جديدة تُلغى الروابط السابقة.</div><div class="card" style="margin-top:14px;background:#f8fbfc">
+<h3 style="margin:0 0 12px;color:var(--navy)">إنشاء رابط توقيع لتقرير محدد</h3>
+<div class="grid">
+<div class="field"><label for="portalEmp">الموظفة</label><select id="portalEmp"><option value="">اختر الموظفة</option></select></div>
+<div class="field"><label for="portalReportType">نوع التقرير</label><select id="portalReportType"><option value="all">التقرير الشامل (غياب وتأخير)</option><option value="absence">تقرير الغياب</option><option value="late">تقرير التأخير</option></select></div>
+</div>
+<div class="actions"><button class="btn primary" type="button" onclick="createSelectedEmployeePortalLink()">إنشاء رابط التوقيع</button><span id="selectedPortalLinkStatus" class="muted" aria-live="polite"></span></div>
+<div id="selectedPortalLinkResult" class="table-wrap" style="margin-top:10px"></div>
+</div>
 <div class="actions"><button class="btn primary" type="button" onclick="createEmployeePortalLinks()">إنشاء روابط الموظفات</button><button class="btn secondary" type="button" onclick="clearPortalLinks()">إخفاء الروابط من الشاشة</button><span id="portalLinksStatus" class="muted" aria-live="polite"></span></div>
 <div id="portalLinksResult" class="table-wrap" style="margin-top:12px"></div>
 <p class="muted">لا يتطلب إنشاء الروابط مفتاحًا إداريًا. احتفظي بالروابط في مكان آمن؛ من يملك الرابط يستطيع فتح التقرير المرتبط به.</p>
 </div>
 <div class="card"><h2>الوظائف المعتمدة</h2><div class="muted">مديرة، وكيلة تعليمية، وكيلة شؤون طلاب / ات، موجهة طلابية، إدارية، معلمة، مستخدمة / مستخدم</div></div></section>
+<section id="sign" class="section">
+<div class="card">
+<h2>متابعة التوقيعات الإلكترونية</h2>
+<p class="muted">تظهر هنا التوقيعات التي اعتمدتها الموظفات من الرابط الخاص. يمكن طباعة التقرير من صفحة الموظفة بعد اعتماد التوقيع.</p>
+<div class="actions"><button class="btn primary" type="button" onclick="refreshPortalSignatureStatus()">تحديث حالات التوقيع</button></div>
+<div id="portalSignatureStatus" class="table-wrap" style="margin-top:12px"><div class="empty">اضغطي «تحديث حالات التوقيع» لعرض النتائج.</div></div>
+</div></section>
 <section id="record-management" class="section"><div class="card"><h2>إدارة الرصد وحذف السجلات</h2><div class="notice">هذه الصفحة مخصصة لإدارة سجلات الغياب والتأخير. يمكنك البحث، تعديل السجل أو حذفه، وتُحفظ التعديلات في المنصة وGoogle Sheets.</div><div id="recordEditor" class="card" style="display:none;margin-top:14px;background:#f9fbfc"><h2 id="recordEditorTitle">تعديل الرصد</h2><div id="recordEditorFields" class="grid"></div><div class="actions"><button class="btn primary" onclick="saveRecordEdit()">💾 حفظ التعديل</button><button class="btn secondary" onclick="cancelRecordEdit()">إلغاء</button></div></div><div class="grid" style="margin-top:14px"><div class="field"><label>نوع السجل</label><select id="manageType" onchange="renderRecordManagement()"><option value="all">كل السجلات</option><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>بحث بالاسم أو رقم السجل</label><input id="manageSearch" oninput="renderRecordManagement()" placeholder="اكتب الاسم أو الرقم"></div></div><div class="actions"><button class="btn danger" onclick="deleteAllRecords('absence')">حذف جميع سجلات الغياب</button><button class="btn danger" onclick="deleteAllRecords('late')">حذف جميع سجلات التأخير</button></div><div id="manageSummary" class="record-summary"></div><div id="recordManagementTable" class="table-wrap" style="margin-top:12px"></div></div></section>
 <div id="toast" class="toast"></div>
 <script>
@@ -243,7 +258,7 @@ document.addEventListener('click',e=>{const n=document.getElementById('mainNav')
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 window.addEventListener('resize',()=>{if(window.innerWidth>1024)closeMenu()});
 let sheetRefreshBusy=false;async function refreshFromSheetsFast(){if(sheetRefreshBusy)return;sheetRefreshBusy=true;try{await loadFromSheets()}finally{sheetRefreshBusy=false}}
-function nav(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active','printing'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));document.getElementById('pageTitle').textContent={home:'لوحة المتابعة',absence:'رصد الغياب',late:'رصد التأخير',employees:'إدارة الموظفات',reports:'التقارير',actions:'الإجراءات والتعليمات',settings:'الإدارة والإعدادات',sign:'توقيع الموظفة','record-management':'إدارة الرصد'}[id];closeMenu();window.scrollTo({top:0,behavior:'smooth'});if(id==='reports')refreshFromSheetsFast()}
+function nav(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active','printing'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));document.getElementById('pageTitle').textContent={home:'لوحة المتابعة',absence:'رصد الغياب',late:'رصد التأخير',employees:'إدارة الموظفات',reports:'التقارير',actions:'الإجراءات والتعليمات',settings:'الإدارة والإعدادات',sign:'توقيع الموظفة','record-management':'إدارة الرصد'}[id];closeMenu();window.scrollTo({top:0,behavior:'smooth'});if(id==='reports')refreshFromSheetsFast();if(id==='sign')refreshPortalSignatureStatus()}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>nav(b.dataset.go));
 function fmtHijri(date){try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'}).format(date)}catch(e){return ''}}
 function showDateInfo(i,o){const d=parseDateSafe(_g(i).value);_g(o).textContent=d?hjStr(d)+' — '+grStr(d)+' — '+WDF.format(d):''}
@@ -673,7 +688,7 @@ async function createEmployeePortalLinks(){
   status.textContent='جارٍ الاتصال بـ Google Sheets وإنشاء الروابط...';
   box.innerHTML='';
   try{
-    const r=await apiPost('createEmployeeLinks',{employees:state.employees});
+    const r=await apiPost('createEmployeeLinks',{});
     if(!r||!r.ok){
       status.textContent='فشل إنشاء الروابط: '+((r&&r.error)||'لم تصل استجابة من Apps Script. أعيدي نشر Code.gs كإصدار جديد.');
       return;
@@ -705,7 +720,36 @@ async function createEmployeePortalLinks(){
   }
 }
 
-function refresh(){fillEmpCard();document.getElementById('sEmp').textContent=state.employees.length;document.getElementById('sAbs').textContent=state.absences.length;document.getElementById('sLate').textContent=state.lates.length;document.getElementById('sMin').textContent=state.lates.reduce((a,x)=>a+(Number(x.minutes)||0),0);['absEmp','lateEmp'].forEach(id=>fillSelect(id));fillSelect('repEmp',true);['absJob','lateJob'].forEach(id=>document.getElementById(id).value='');applySeasonStart();fillSettings();document.getElementById('empTable').innerHTML=state.employees.length?state.employees.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td><span class="pill">'+e.job+'</span></td><td><button class="btn secondary" onclick="editEmp(\''+e.id+'\')">تعديل</button> <button class="btn danger" onclick="delEmp(\''+e.id+'\')">حذف</button></td></tr>').join(''):'<tr><td colspan="4" class="empty">لا توجد موظفات</td></tr>';document.getElementById('recent').innerHTML=state.absences.length||state.lates.length?'آخر تحديث: '+new Date().toLocaleString('ar-SA'):'لا توجد سجلات بعد.';renderDeleteRecords();renderRecordManagement()}
+
+async function createSelectedEmployeePortalLink(){
+ const empId=_g('portalEmp')?.value,reportType=_g('portalReportType')?.value||'all';
+ const status=_g('selectedPortalLinkStatus'),box=_g('selectedPortalLinkResult');
+ if(!empId){status.textContent='اختاري الموظفة أولاً.';return}
+ status.textContent='جارٍ إنشاء الرابط...';box.innerHTML='';
+ try{
+  const r=await apiPost('createEmployeeLinks',{employeeId:empId,reportType:reportType});
+  if(!r||!r.ok||!Array.isArray(r.links)||!r.links.length){status.textContent=(r&&r.error)||'تعذر إنشاء الرابط. تحققي من نشر Code.gs المحدّث.';return}
+  const item=r.links[0],row=document.createElement('div');
+  row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff';
+  const label=document.createElement('strong');label.textContent=item.name+' — '+({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[reportType]||'التقرير');
+  const link=document.createElement('a');link.href=item.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='فتح الرابط';
+  const copy=document.createElement('button');copy.className='btn secondary';copy.textContent='نسخ الرابط';copy.type='button';copy.onclick=async()=>{try{await navigator.clipboard.writeText(item.url);copy.textContent='تم النسخ'}catch(e){window.prompt('انسخي الرابط يدويًا:',item.url)}};
+  row.append(label,link,copy);box.appendChild(row);status.textContent='تم إنشاء الرابط بنجاح. إنشاء رابط جديد يلغي الروابط السابقة.';
+ }catch(e){status.textContent='تعذر إنشاء الرابط: '+String(e&&e.message||e)}
+}
+async function refreshPortalSignatureStatus(){
+ const box=_g('portalSignatureStatus');if(!box)return;
+ box.innerHTML='<div class="empty">جارٍ تحميل حالات التوقيع...</div>';
+ try{
+  const r=await apiGet('portalSignatures');
+  if(!r||!r.ok){box.innerHTML='<div class="empty">تعذر تحميل الحالات. تحققي من نشر Code.gs المحدّث.</div>';return}
+  const rows=Array.isArray(r.data)?r.data:[];
+  if(!rows.length){box.innerHTML='<div class="empty">لا توجد توقيعات إلكترونية حتى الآن.</div>';return}
+  box.innerHTML='<table><thead><tr><th>م</th><th>الموظفة</th><th>نوع التقرير</th><th>حالة التوقيع</th><th>تاريخ ووقت الاعتماد</th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td><span class="pill">تم التوقيع</span></td><td>'+escH(x.at||'')+'</td></tr>').join('')+'</tbody></table>';
+ }catch(e){box.innerHTML='<div class="empty">تعذر تحميل حالات التوقيع.</div>'}
+}
+
+function refresh(){fillEmpCard();fillSelect('portalEmp');document.getElementById('sEmp').textContent=state.employees.length;document.getElementById('sAbs').textContent=state.absences.length;document.getElementById('sLate').textContent=state.lates.length;document.getElementById('sMin').textContent=state.lates.reduce((a,x)=>a+(Number(x.minutes)||0),0);['absEmp','lateEmp'].forEach(id=>fillSelect(id));fillSelect('repEmp',true);['absJob','lateJob'].forEach(id=>document.getElementById(id).value='');applySeasonStart();fillSettings();document.getElementById('empTable').innerHTML=state.employees.length?state.employees.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td><span class="pill">'+e.job+'</span></td><td><button class="btn secondary" onclick="editEmp(\''+e.id+'\')">تعديل</button> <button class="btn danger" onclick="delEmp(\''+e.id+'\')">حذف</button></td></tr>').join(''):'<tr><td colspan="4" class="empty">لا توجد موظفات</td></tr>';document.getElementById('recent').innerHTML=state.absences.length||state.lates.length?'آخر تحديث: '+new Date().toLocaleString('ar-SA'):'لا توجد سجلات بعد.';renderDeleteRecords();renderRecordManagement()}
 
 let sigDrawing=false;
 function sigPos(e){const r=document.getElementById('sigCanvas').getBoundingClientRect(),p=e.touches?e.touches[0]:e;return{x:p.clientX-r.left,y:p.clientY-r.top}}
@@ -717,6 +761,37 @@ function deleteAction(id){const p=prompt('أدخل الرقم السري لحذ�
 function saveSignature(){const id=document.getElementById('sigEmp').value;if(!id)return toast('اختر الموظفة');const c=document.getElementById('sigCanvas'),data=c.toDataURL('image/png');state.signatures[id]={data:data,type:document.getElementById('sigType').value,at:new Date().toISOString()};save();document.getElementById('sigStatus').textContent='✓ تم الاطلاع والتوقيع — '+new Date().toLocaleString('ar-SA');toast('تم حفظ التوقيع')}
 function tick(){const d=new Date();document.getElementById('clock').innerHTML=fmtHijri(d)+'<br><b>'+new Intl.DateTimeFormat('ar-SA',{dateStyle:'full',timeStyle:'short'}).format(d)+'</b>'}
 function portalDateHtml(value){try{const d=parseDateSafe(value);if(!d)return escH(value??'');return '<div style="font-weight:700;white-space:nowrap">'+escH(WDF.format(d))+' — '+escH(hjStr(d))+'</div><div style="color:#526779;font-size:12px;margin-top:4px;white-space:nowrap">'+escH(grStr(d))+'</div>';}catch(err){return escH(value??'')}}
+
+let portalSigDrawing=false;
+function setupPortalSignature(){
+ const c=document.getElementById('portalSignatureCanvas');if(!c)return;
+ const ctx=c.getContext('2d');let drawing=false;
+ const point=e=>{const r=c.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+ c.addEventListener('pointerdown',e=>{drawing=true;c.setPointerCapture&&c.setPointerCapture(e.pointerId);const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)});
+ c.addEventListener('pointermove',e=>{if(!drawing)return;const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke()});
+ ['pointerup','pointercancel','pointerleave'].forEach(ev=>c.addEventListener(ev,()=>{drawing=false}));
+ ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';
+}
+function clearPortalSignature(){
+ const c=document.getElementById('portalSignatureCanvas');if(!c)return;
+ c.getContext('2d').clearRect(0,0,c.width,c.height);
+ const status=document.getElementById('portalSignatureStatusText');if(status)status.textContent='تم مسح التوقيع من مساحة الرسم.';
+}
+async function submitPortalSignature(){
+ const c=document.getElementById('portalSignatureCanvas'),status=document.getElementById('portalSignatureStatusText');
+ if(!c||!status)return;
+ const blank=document.createElement('canvas');blank.width=c.width;blank.height=c.height;
+ if(c.toDataURL()===blank.toDataURL()){status.textContent='يرجى التوقيع داخل المساحة أولاً.';return}
+ const token=window.__portalSignToken,reportType=window.__portalReportType||'all';
+ status.textContent='جارٍ إرسال التوقيع وحفظه...';
+ try{
+  const r=await apiPost('saveEmployeeSignature',{token:token,reportType:reportType,data:c.toDataURL('image/png')});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر حفظ التوقيع. حاولي مرة أخرى.';return}
+  status.textContent='✓ تم اعتماد التوقيع وحفظه بنجاح — '+(r.at||'');
+  const view=document.getElementById('portalSavedSignature');if(view){view.innerHTML='<img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+c.toDataURL('image/png')+'">';}
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة. لم يتم تأكيد حفظ التوقيع.'}
+}
+
 async function initEmployeePortal(){
  const token=new URLSearchParams(location.search).get('portal');
  if(!token)return false;
@@ -729,6 +804,7 @@ async function initEmployeePortal(){
   const result=await response.json();
   if(!result||!result.ok){root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>'+escH(result&&result.error||'تعذر الاتصال بالخدمة')+'</p></div>';return true;}
   const e=result.employee||{},d=result.data||{},abs=d.absences||[],lates=d.lates||[],actions=d.actions||[];
+  window.__portalSignToken=token;window.__portalReportType=result.reportType||'all';
   const dateCell=v=>v?portalDateHtml(v):'—';
   const section=(title,body)=>'<section style="background:#fff;border:1px solid #dce5eb;border-radius:16px;padding:16px;margin:16px 0;box-shadow:0 4px 16px #0f2a4310"><h2 style="margin:0 0 12px;color:#0f2a43;font-size:18px">'+title+'</h2>'+body+'</section>';
   const empty='<div style="padding:18px;text-align:center;color:#6b7c8f;background:#f8fafb;border-radius:10px">لا توجد سجلات.</div>';
@@ -747,7 +823,9 @@ async function initEmployeePortal(){
    section('نموذج A — السجل التفصيلي',table(['النوع','من','إلى','النوع/السبب','الأيام/الدقائق','ملاحظات'],aRows))+
    section('نموذج B — الملخص الشهري',table(['الشهر','أيام/سجلات الغياب','عدد مرات التأخير','إجمالي دقائق التأخير'],bRows))+
    section('الإجراءات',actions.length?table(['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],actions.map(x=>[dateCell(x.date),escH(x.type||''),escH(x.text||''),escH(x.note||'')])):empty)+
-   '<div style="text-align:center;color:#6b7c8f;font-size:11px;padding:14px">تاريخ التقرير: '+portalDateHtml(new Date())+'</div>';
+   '<div style="text-align:center;color:#6b7c8f;font-size:11px;padding:14px">تاريخ التقرير: '+portalDateHtml(new Date())+'</div>' +
+   section('التوقيع الإلكتروني','<p style="font-size:13px;color:#526779">راجعي التقرير أعلاه، ثم وقّعي داخل المساحة واضغطي «اعتماد وإرسال». لا يُعتمد التوقيع إلا بعد تأكيد حفظه في النظام.</p>'+(d.signature?'<div style="padding:10px;background:#f2faf6;border:1px solid #b7e4cf;border-radius:10px;margin-bottom:10px"><b style="color:#17805b">سبق اعتماد هذا التقرير</b><div id="portalSavedSignature" style="margin-top:8px"><img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+escH(d.signature.data||'')+'"></div><small>وقت الاعتماد: '+escH(d.signature.at||'')+'</small></div>':'<div id="portalSavedSignature"></div>')+'<canvas id="portalSignatureCanvas" width="1000" height="260" aria-label="مساحة التوقيع" style="display:block;width:100%;height:190px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;touch-action:none"></canvas><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" onclick="clearPortalSignature()" style="border:1px solid #cbd5e1;background:#fff;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">مسح</button><button type="button" onclick="submitPortalSignature()" style="border:0;background:#1267b2;color:#fff;border-radius:10px;padding:11px 18px;font:700 14px Cairo">اعتماد وإرسال</button><button type="button" onclick="window.print()" style="border:1px solid #cbd5e1;background:#f5f8fa;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">طباعة التقرير / PDF</button></div><p id="portalSignatureStatusText" aria-live="polite" style="font-size:13px;color:#526779;margin-top:10px">'+(d.signature?'تم حفظ التوقيع سابقًا. يمكن تحديثه عند الحاجة.':'بانتظار توقيع الموظفة')+'</p>');
+  setupPortalSignature();
  }catch(err){
   root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>تحققي من نشر Code.gs المحدّث.</p></div>';
  }
