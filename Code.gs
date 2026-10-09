@@ -33,7 +33,7 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
-    if(action==='createEmployeeLinks') return json_(createEmployeeLinks_(ss));
+    if(action==='createEmployeeLinks'){ const incoming=(body.data&&Array.isArray(body.data.employees))?body.data.employees:[]; if(incoming.length) upsertMany_(ss,CONFIG.sheets.employees,incoming); SpreadsheetApp.flush(); return json_(createEmployeeLinks_(ss)); }
     if(action==='sync'){
       const d=body.data||{};
       const delSuccess=[],delFailed=[];
