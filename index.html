@@ -666,19 +666,20 @@ function clearPortalLinks(){
   if(box)box.innerHTML='';
   if(status)status.textContent='تم إخفاء الروابط من الشاشة.';
 }
-function createEmployeePortalLinks(){
+async function createEmployeePortalLinks(){
   const status=document.getElementById('portalLinksStatus');
   const box=document.getElementById('portalLinksResult');
-  if(!confirm('سيتم إنشاء روابط جديدة للموظفات واستبدال صلاحية الروابط السابقة. هل تريد المتابعة؟'))return;
-  status.textContent='جارٍ إنشاء الروابط...';
+  if(!status||!box){alert('تعذر العثور على مساحة عرض الروابط. حدّثي صفحة المنصة.');return}
+  status.textContent='جارٍ الاتصال بـ Google Sheets وإنشاء الروابط...';
   box.innerHTML='';
-  apiPost('createEmployeeLinks',{}).then(r=>{
+  try{
+    const r=await apiPost('createEmployeeLinks',{});
     if(!r||!r.ok){
-      status.textContent=(r&&r.error)||'تعذر إنشاء الروابط. تأكدي من نشر Code.gs المحدّث.';
+      status.textContent='فشل إنشاء الروابط: '+((r&&r.error)||'لم تصل استجابة من Apps Script. أعيدي نشر Code.gs كإصدار جديد.');
       return;
     }
     const links=Array.isArray(r.links)?r.links:[];
-    if(!links.length){status.textContent='لم يتم العثور على موظفات لإنشاء الروابط.';return}
+    if(!links.length){status.textContent='وصل الاتصال بنجاح، لكن لم تُوجد موظفات في ورقة Employees. تأكدي من أسماء أوراق Google Sheets ثم أعيدي المحاولة.';return}
     const table=document.createElement('table');
     table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرابط الخاص</th><th>نسخ</th></tr></thead><tbody></tbody>';
     const tbody=table.querySelector('tbody');
@@ -692,20 +693,16 @@ function createEmployeePortalLinks(){
       const tdBtn=document.createElement('td');
       const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='نسخ الرابط';
       btn.addEventListener('click',async()=>{
-        try{
-          await navigator.clipboard.writeText(String(item.url||''));
-          btn.textContent='تم النسخ';setTimeout(()=>btn.textContent='نسخ الرابط',1600);
-        }catch(err){
-          window.prompt('انسخي الرابط يدويًا:',String(item.url||''));
-        }
+        try{await navigator.clipboard.writeText(String(item.url||''));btn.textContent='تم النسخ';}
+        catch(err){window.prompt('انسخي الرابط يدويًا:',String(item.url||''));}
       });
       tdBtn.appendChild(btn);tr.append(tdNo,tdName,tdUrl,tdBtn);tbody.appendChild(tr);
     });
     box.appendChild(table);
-    status.textContent='تم إنشاء '+links.length+' رابطًا. احفظيها في مكان آمن الآن؛ لن يُعاد عرض الرموز السرية عند الطلب لاحقًا.';
-  }).catch(()=>{
-    status.textContent='تعذر الاتصال. تحققي من رابط Apps Script وإصدار النشر.';
-  });
+    status.textContent='تم إنشاء '+links.length+' رابطًا. احفظيها في مكان آمن؛ عند إعادة الإنشاء ستُلغى الروابط السابقة.';
+  }catch(err){
+    status.textContent='حدث خطأ أثناء إنشاء الروابط: '+String(err&&err.message||err)+'. تحققي من نشر Code.gs كإصدار جديد.';
+  }
 }
 
 function refresh(){fillEmpCard();document.getElementById('sEmp').textContent=state.employees.length;document.getElementById('sAbs').textContent=state.absences.length;document.getElementById('sLate').textContent=state.lates.length;document.getElementById('sMin').textContent=state.lates.reduce((a,x)=>a+(Number(x.minutes)||0),0);['absEmp','lateEmp'].forEach(id=>fillSelect(id));fillSelect('repEmp',true);['absJob','lateJob'].forEach(id=>document.getElementById(id).value='');applySeasonStart();fillSettings();document.getElementById('empTable').innerHTML=state.employees.length?state.employees.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td><span class="pill">'+e.job+'</span></td><td><button class="btn secondary" onclick="editEmp(\''+e.id+'\')">تعديل</button> <button class="btn danger" onclick="delEmp(\''+e.id+'\')">حذف</button></td></tr>').join(''):'<tr><td colspan="4" class="empty">لا توجد موظفات</td></tr>';document.getElementById('recent').innerHTML=state.absences.length||state.lates.length?'آخر تحديث: '+new Date().toLocaleString('ar-SA'):'لا توجد سجلات بعد.';renderDeleteRecords();renderRecordManagement()}
