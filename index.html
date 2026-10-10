@@ -516,24 +516,40 @@ function monthRecs(e,y,m){
  });
  return{L,A};
 }
-function bDateCell(d,i){return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hjStr(d):'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
+function latenessForCycleMonth(e,y,m,months){
+ const out={},seen=new Set(),cycle=Array.isArray(months)&&months.length?months:reportMonthsInA(new Date(),new Date());
+ const records=state.lates.filter(x=>sameEmployeeRecord(x,e)).map(x=>({x,d:parseDateSafe(x.date)})).filter(v=>v.d);
+ records.forEach(v=>{
+  const x=v.x,p=hparts(v.d);
+  /* لا تعتمد على معرّف السجل وحده؛ قد تصل الواقعة نفسها بمعرّفات مختلفة من Sheets والتخزين المحلي. */
+  const key=[String(x.empId??x.employeeId??x.employeeID??x.employee_id??x.name??e.id),v.d.getFullYear(),v.d.getMonth()+1,v.d.getDate(),String(x.arrival||x.start||''),String(Number(x.minutes)||0),String(x.reason||'').trim()].join('|');
+  let target=cycle.find(q=>q[0]===p.y&&q[1]===p.m);
+  if(!target){
+   const candidates=cycle.filter(q=>q[1]===p.m);
+   if(candidates.length===1)target=candidates[0];
+   else if(candidates.length)target=candidates.slice().sort((a,b)=>Math.abs(a[0]-p.y)-Math.abs(b[0]-p.y))[0];
+  }
+  if(!target||target[0]!==y||target[1]!==m||seen.has(key))return;
+  (out[p.d]=out[p.d]||[]).push(x);seen.add(key);
+ });
+ return out;
+}
+function bDateCell(d,i){const p=d?hparts(d):null;return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hmName(p.m)+' '+ar(p.y)+'هـ':'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
 function bSignatures(e){return '<div class="bf-sign"><div><b>الموظفة</b><br><span>صفية عسيري</span><br><span>التوقيع: ................................</span></div><div><b>مديرة المدرسة</b><br><span>مرفت خليل سمندر</span><br><span>التوقيع: ................................</span></div></div>'}
-function formB(e,y,m,force){
-const r=monthRecs(e,y,m);
-// إصلاح خاص بنموذج التأخير B: مطابقة سجلات التأخير حسب الشهر الهجري عند اختلاف تحويل التاريخ.
-// لا يغيّر هذا المسار سجلات الغياب أو طريقة عمل نموذج A.
-const lateKey=x=>String(x&&x.id||[x&&x.empId,x&&x.date,x&&x.arrival,x&&x.minutes,x&&x.reason,x&&x.created].join('|'));
-const seenLate=new Set();
-Object.keys(r.L).forEach(d=>(r.L[d]||[]).forEach(x=>seenLate.add(lateKey(x))));
-state.lates.forEach(x=>{
- if(!sameEmployeeRecord(x,e)||seenLate.has(lateKey(x)))return;
- const d=parseDateSafe(x.date);if(!d)return;
- const p=hparts(d);
- if(p.m!==m)return;
- (r.L[p.d]=r.L[p.d]||[]).push(x);
- seenLate.add(lateKey(x));
-});
-if(!force&&!Object.keys(r.L).length&&!Object.keys(r.A).length)return '';const n=Math.max(30,monthLen(y,m)),today=dateOnly(new Date());let tot=0,body='';for(let i=1;i<=n;i++){const dt=h2g(y,m,i),wd=dt?dt.getDay():-1;if(!dt||wd===5||wd===6)continue;const ls=r.L[i],ab=r.A[i];let st='',arr='',mn='',rs='';if(ab){st=ab.type==='بدون عذر'?'غائبة':ab.type;rs=ab.note||''}else if(ls){st='حاضرة'}else if(wd===5||wd===6){st='<span class="b-muted">إجازة</span>'}else if(dt&&dateOnly(dt)<=today){st='حاضرة'}if(ls){const mm=ls.reduce((s,x)=>s+(Number(x.minutes)||0),0),f=ls.find(x=>x.arrival);arr=f?fmtT(f.arrival):'';if(mm){mn=ar(mm)+' دقيقة';tot+=mm}if(!rs)rs=ls.map(x=>x.reason).filter(Boolean).join('، ')}body+='<tr>'+bDateCell(dt,i)+'<td>'+WDF.format(dt||new Date())+'</td><td>'+st+'</td><td>'+arr+'</td><td>'+mn+'</td><td>'+rs+'</td></tr>'}const action=actName(tot)||'لا يوجد إجراء';return '<div class="fb"><div class="fbh"><div class="fbsch">'+schoolName()+'</div><div class="fbtitle">سجل التأخير</div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div><div class="fbn"><div>اسم الموظفة : <b>'+e.name+'</b></div><div>الوظيفة: <b>'+e.job+'</b></div></div><div class="fbp">شهر '+hmName(m)+' '+ar(y)+'هـ</div><table class="fbt"><colgroup><col style="width:14%"><col style="width:12%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:33%"></colgroup><thead><tr><th>م / التاريخ</th><th>اليوم</th><th>حالة الحضور</th><th>وقت الوصول</th><th>دقائق التأخير</th><th>السبب / الملاحظات</th></tr></thead><tbody>'+body+'</tbody></table><table class="fbt fbsum"><tr><th>إجمالي دقائق التأخير للشهر</th><td>'+ar(tot)+' دقيقة</td><th>الإجراء الإداري الآلي</th><td class="hit">'+action+'</td></tr></table>'+bSignatures(e)+'</div>'}
+function formB(e,y,m,force,cycleMonths){
+ const r=monthRecs(e,y,m);
+ /* طابق منطق نموذج A: حدد الشهر المطابق بالسنة أولًا، ثم أقرب سنة لنفس الشهر داخل الدورة؛ ولا تخلط سجلات أشهر الغياب مع التأخير. */
+ r.L=latenessForCycleMonth(e,y,m,cycleMonths);
+ const allActions=(Array.isArray(state.actions)?state.actions:[]).filter(a=>sameEmployeeRecord(a,e)).map(a=>({a,d:parseDateSafe(a.date||a.reportDate||a.created)})).filter(v=>v.d);
+ const exactActions=allActions.filter(v=>{const p=hparts(v.d);return p.y===y&&p.m===m;});
+ const monthActions=exactActions.concat(allActions.filter(v=>hparts(v.d).m===m)).filter((v,i,a)=>a.findIndex(q=>String(q.a.id||q.a.created||q.a.text)===String(v.a.id||v.a.created||v.a.text))===i).map(v=>v.a);
+ if(!force&&!Object.keys(r.L).length&&!monthActions.length)return '';
+ const n=Math.max(30,monthLen(y,m)),today=dateOnly(new Date());let tot=0,body='';
+ for(let i=1;i<=n;i++){const dt=h2g(y,m,i),wd=dt?dt.getDay():-1;if(!dt||wd===5||wd===6)continue;const ls=r.L[i];let st='',arr='',mn='',rs='';if(ls){st='حاضرة'}else if(dt&&dateOnly(dt)<=today){st='حاضرة'}if(ls){const mm=ls.reduce((s,x)=>s+(Number(x.minutes)||0),0),f=ls.find(x=>x.arrival);arr=f?fmtT(f.arrival):'';if(mm){mn=ar(mm)+' دقيقة';tot+=mm}rs=ls.map(x=>x.reason).filter(Boolean).join('، ')}body+='<tr>'+bDateCell(dt,i)+'<td>'+WDF.format(dt||new Date())+'</td><td>'+st+'</td><td>'+arr+'</td><td>'+mn+'</td><td>'+rs+'</td></tr>'}
+ const action=actName(tot)||'لا يوجد إجراء';
+ const actionDetails=monthActions.length?'<div class="fb-action-details"><h3>الإجراءات المتخذة المسجلة</h3><table class="fbt"><thead><tr><th>التاريخ</th><th>نوع الإجراء</th><th>الإجراء المتخذ</th><th>ملاحظات</th></tr></thead><tbody>'+monthActions.map(a=>'<tr><td>'+dateCell(a.date||a.reportDate||a.created)+'</td><td>'+(a.type||'')+'</td><td>'+(a.text||'')+'</td><td>'+(a.note||'')+'</td></tr>').join('')+'</tbody></table></div>':'<div class="fb-action-details"><h3>الإجراءات المتخذة المسجلة</h3><p>لا توجد إجراءات مسجلة لهذا الشهر في بيانات المنصة.</p></div>';
+ return '<div class="fb"><div class="fbh"><div class="fbsch">'+schoolName()+'</div><div class="fbtitle">سجل التأخير</div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div><div class="fbn"><div>اسم الموظفة : <b>'+e.name+'</b></div><div>الوظيفة: <b>'+e.job+'</b></div></div><div class="fbp">شهر '+hmName(m)+' '+ar(y)+'هـ</div><table class="fbt"><colgroup><col style="width:14%"><col style="width:12%"><col style="width:14%"><col style="width:14%"><col style="width:13%"><col style="width:33%"></colgroup><thead><tr><th>م / التاريخ</th><th>اليوم</th><th>حالة الحضور</th><th>وقت الوصول</th><th>دقائق التأخير</th><th>السبب / الملاحظات</th></tr></thead><tbody>'+body+'</tbody></table><table class="fbt fbsum"><tr><th>إجمالي دقائق التأخير للشهر</th><td>'+ar(tot)+' دقيقة</td><th>الإجراء الإداري الآلي</th><td class="hit">'+action+'</td></tr></table>'+actionDetails+bSignatures(e)+'</div>';
+}
 function formBAbsence(e,y,m,force){const r=monthRecs(e,y,m);if(!force&&!Object.keys(r.A).length)return '';const n=Math.max(30,monthLen(y,m)),today=dateOnly(new Date());let days=0,body='',types={};for(let i=1;i<=n;i++){const dt=h2g(y,m,i),wd=dt?dt.getDay():-1;if(!dt||wd===5||wd===6)continue;const ab=r.A[i];let st='',ty='',note='';if(ab){st='غائبة';ty=ab.type||'غياب';note=ab.note||'';days++;types[ty]=(types[ty]||0)+1}else if(wd===5||wd===6){st='<span class="b-muted">إجازة</span>'}else if(dt&&dateOnly(dt)<=today){st='حاضرة'}body+='<tr>'+bDateCell(dt,i)+'<td>'+WDF.format(dt||new Date())+'</td><td>'+st+'</td><td>'+ty+'</td><td>'+((ab&&ab.days)||'')+'</td><td>'+note+'</td></tr>'}const typeSummary=Object.keys(types).map(k=>k+' '+ar(types[k])+' يوم').join(' — ')||'لا يوجد غياب';return '<div class="fb"><div class="fbh"><div class="fbsch">'+schoolName()+'</div><div class="fbtitle">سجل الغياب</div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div><div class="fbn"><div>اسم الموظفة : <b>'+e.name+'</b></div><div>الوظيفة: <b>'+e.job+'</b></div></div><div class="fbp">شهر '+hmName(m)+' '+ar(y)+'هـ</div><table class="fbt"><colgroup><col style="width:14%"><col style="width:12%"><col style="width:18%"><col style="width:18%"><col style="width:10%"><col style="width:28%"></colgroup><thead><tr><th>م / التاريخ</th><th>اليوم</th><th>حالة الدوام</th><th>نوع الغياب</th><th>الأيام</th><th>ملاحظات</th></tr></thead><tbody>'+body+'</tbody></table><table class="fbt fbsum"><tr><th>إجمالي أيام الغياب</th><td>'+ar(days)+' يوم</td><th>تفصيل الغياب</th><td class="al">'+typeSummary+'</td></tr></table>'+bSignatures(e)+'</div>'}
 function applySeasonStart(){const l=_g('lateDate');const iso=(l&&l.value)||toInputDate(new Date());calcLate();const i=_g('seasonInfo');if(i)i.textContent='التوقيت المعتمد: '+(seasonOf(iso)==='summer'?'صيفي':'شتوي')+' — بداية الدوام '+fmtT(startFor(iso))}
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='lateDate'){showDateInfo('lateDate','lateDateInfo');applySeasonStart()}});
@@ -686,7 +702,7 @@ const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'late',lateA);
 _g('report').innerHTML=es.length?es.map(e=>formA(e,range)).join(''):'<div class="empty">لا توجد سجلات تأخير. اختر موظفة لعرض النموذج.</div>';
 return}
 if(sec==='absence'&&type==='A'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,'absence',abs);_g('report').innerHTML=es.length?es.map(e=>formAAbsence(e,range)).join(''):'<div class="empty">لا توجد سجلات غياب في الفترة المحددة. اختر موظفة لعرض النموذج فارغًا أو غيّر الفترة.</div>';return}
-if(type==='B'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,sec,sec==='late'?late:abs),ms=reportMonthsIn(range.from,range.to),pg=[];es.forEach(e=>ms.forEach(([y,m])=>{const h=sec==='late'?formB(e,y,m,!!emp||!id):formBAbsence(e,y,m,!!emp||!id);if(h)pg.push(h)}));_g('report').innerHTML=pg.length?pg.join(''):'<div class="empty">لا توجد سجلات في الفترة المحددة. اختر موظفة لعرض النموذج الشهري أو غيّر الفترة.</div>';return}
+if(type==='B'){const es=sortEmployeesByLatestReport(emp?[emp]:state.employees,sec,sec==='late'?state.lates.filter(x=>!id||sameEmployeeRecord(x,emp)):abs),ms=sec==='late'?reportMonthsInA(range.from,range.to):reportMonthsIn(range.from,range.to),pg=[];es.forEach(e=>ms.forEach(([y,m])=>{const h=sec==='late'?formB(e,y,m,false,ms):formBAbsence(e,y,m,!!emp||!id);if(h)pg.push(h)}));_g('report').innerHTML=pg.length?pg.join(''):'<div class="empty">لا توجد سجلات في الفترة المحددة. اختر موظفة لعرض النموذج الشهري أو غيّر الفترة.</div>';return}
 const td=a=>'<tr>'+a.map((v,i)=>'<td'+(i===0||typeof v==='number'?' class="report-num"':'')+(typeof v==='string'&&(/[0-9٠-٩]/.test(v))?' class="report-date"':'')+'>'+(v===undefined||v===null?'':v)+'</td>').join('');let rows='',headers='';
 if(sec==='absence'){abs.sort((a,b)=>{const da=parseDateSafe(a.from||a.reportDate),db=parseDateSafe(b.from||b.reportDate);return (db?db.getTime():0)-(da?da.getTime():0)});rows=abs.map((x,i)=>td([i+1,reportName(x),reportJob(x),x.month,x.type,dateCell(x.from),dateCell(x.to),x.days,x.ref])).join('');headers='<th>م</th><th>الموظفة</th><th>المسمى</th><th>الشهر الهجري</th><th>نوع الغياب</th><th>من</th><th>إلى</th><th>الأيام</th><th>المرجع</th>'}
 else{late.sort((a,b)=>{const da=parseDateSafe(a.date),db=parseDateSafe(b.date);return (db?db.getTime():0)-(da?da.getTime():0)});rows=late.map((x,i)=>td([i+1,reportName(x),reportJob(x),dateCell(x.date),x.start,x.arrival,x.minutes,x.reason])).join('');headers='<th>م</th><th>الموظفة</th><th>المسمى</th><th>التاريخ</th><th>بداية الدوام</th><th>الحضور</th><th>الدقائق</th><th>السبب</th>'}
