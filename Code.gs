@@ -87,6 +87,10 @@ function doPost(e){
       const d=body.data||{};
       return json_(deletePortalSignature_(ss,d));
     }
+    if(action==='deleteAllPortalSignatures'){
+      const d=body.data||{};
+      return json_(deleteAllPortalSignatures_(ss,d));
+    }
     if(action==='sync'){
       const d=body.data||{};
       const delSuccess=[],delFailed=[];
@@ -445,6 +449,18 @@ function deletePortalSignature_(ss,data){
   }
   return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
 }
+function deleteAllPortalSignatures_(ss,data){
+  const password=String((data&&data.password)||'');
+  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
+  const sh=portalSignaturesSheet_(ss);
+  const last=sh.getLastRow();
+  if(last<2) return {ok:true,deleted:true,count:0,message:'لا توجد توقيعات لحذفها'};
+  const count=last-1;
+  sh.deleteRows(2,count);
+  SpreadsheetApp.flush();
+  return {ok:true,deleted:true,count:count,message:'تم حذف جميع التوقيعات الإلكترونية'};
+}
+
 function employeeReport_(ss,token){
   const emp=findPortalToken_(ss,token);
   if(!emp)return {ok:false,error:token?'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.':'الرابط غير مكتمل'};
