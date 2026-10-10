@@ -239,7 +239,7 @@ try{const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||
 state.actions=Array.isArray(state.actions)?state.actions:[];state.pendingDeletes=Array.isArray(state.pendingDeletes)?state.pendingDeletes:[];
 
 async function apiGet(action){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return null;try{const r=await fetch(url+'?action='+encodeURIComponent(action),{cache:'no-store'});return await r.json()}catch(e){console.warn('API GET',e);return null}}
-async function apiPost(action,data){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data}),redirect:'follow'});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:'تعذر الاتصال بـ Google Sheets'}}}
+async async function apiPost(action,data){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data}),redirect:'follow',signal:controller.signal});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:e&&e.name==='AbortError'?'انتهت مهلة الاتصال بـ Google Sheets (20 ثانية)':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
 async function deleteFromSheets(type,id){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return false;const r=await apiPost('delete',{type:type,id:String(id)});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر المزامنة مع Google Sheets أثناء الحذف');return false}
 async function deleteAllFromSheets(type){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return true;const r=await apiPost('deleteAll',{type:type});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر حذف السجلات من Google Sheets');return false}
 let syncTimer=null;
@@ -260,22 +260,24 @@ async function syncToSheets(){
   if(syncBusy){syncQueued=true;return;}
   syncBusy=true;setSyncStatus('جاري التحديث','busy');
   clearTimeout(syncRetryTimer);
-  const syncSettings=Object.assign({},state.settings,{customEmployees:state.employees.filter(e=>String(e.id||'').startsWith('custom-')).map(e=>({...e})),settingsUpdated:Date.now()}); state.settings=syncSettings; const r=await apiPost('sync',{employees:state.employees,absences:state.absences,lates:state.lates,signatures:state.signatures,settings:syncSettings,actions:state.actions,deletes:state.pendingDeletes||[]});
-  syncBusy=false;
-  if(r&&r.ok){
-    const done=((r.result&&r.result.deletes&&r.result.deletes.successIds)||[]).map(String);
-    if(done.length){
-      state.pendingDeletes=(state.pendingDeletes||[]).filter(x=>!done.includes(String(x.id)));
-      localStorage.setItem(KEY,JSON.stringify(state));
+  let r=null;
+  try{
+    const syncSettings=Object.assign({},state.settings,{customEmployees:state.employees.filter(e=>String(e.id||'').startsWith('custom-')).map(e=>({...e})),settingsUpdated:Date.now()}); state.settings=syncSettings;
+    r=await apiPost('sync',{employees:state.employees,absences:state.absences,lates:state.lates,signatures:state.signatures,settings:syncSettings,actions:state.actions,deletes:state.pendingDeletes||[]});
+    if(r&&r.ok){
+      const done=((r.result&&r.result.deletes&&r.result.deletes.successIds)||[]).map(String);
+      if(done.length){state.pendingDeletes=(state.pendingDeletes||[]).filter(x=>!done.includes(String(x.id)));localStorage.setItem(KEY,JSON.stringify(state));}
+      console.log('تمت المزامنة مع Google Sheets');setSyncStatus('تم التحديث','ok');
+    }else{
+      console.warn('sync failed',r);setSyncStatus((r&&r.error)||'تعذر الاتصال؛ ستتم إعادة المحاولة تلقائيًا','error');
+      syncRetryTimer=setTimeout(()=>syncToSheets(),5000);
     }
-    console.log('تمت المزامنة مع Google Sheets');setSyncStatus('تم التحديث','ok');
-  }else{
-    console.warn('sync failed',r);setSyncStatus('تعذر الاتصال؛ ستتم إعادة المحاولة تلقائيًا','error');
-    syncRetryTimer=setTimeout(()=>syncToSheets(),3000);
-  }
-  if(syncQueued){
-    syncQueued=false;
-    queueSheetSync(0);
+  }catch(e){
+    console.error('sync exception',e);setSyncStatus('تعذر إكمال المزامنة؛ ستتم إعادة المحاولة','error');
+    syncRetryTimer=setTimeout(()=>syncToSheets(),5000);
+  }finally{
+    syncBusy=false;
+    if(syncQueued){syncQueued=false;queueSheetSync(0);}
   }
   return r;
 }
