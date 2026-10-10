@@ -42,6 +42,10 @@ function doPost(e){
       const d=body.data||{};
       return json_(saveEmployeeSignature_(ss,d));
     }
+    if(action==='deletePortalSignature'){
+      const d=body.data||{};
+      return json_(deletePortalSignature_(ss,d));
+    }
     if(action==='sync'){
       const d=body.data||{};
       const delSuccess=[],delFailed=[];
@@ -296,7 +300,43 @@ function saveEmployeeSignature_(ss,data){
   return {ok:true,saved:true,at:now,message:'تم حفظ التوقيع بنجاح'};
 }
 function listPortalSignatures_(ss){
-  return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).map(r=>({name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||''})).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).map(r=>({id:String(r.id||r.token||''),name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||''})).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+function deletePortalSignature_(ss,data){
+  const id=String(data.id||'').trim();
+  const password=String(data.password||'');
+  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
+  if(!/^[a-f0-9]{32,64}$/i.test(id)) return {ok:false,error:'معرّف التوقيع غير صالح'};
+  const sh=portalSignaturesSheet_(ss);
+  const last=sh.getLastRow();
+  if(last<2) return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
+  const ids=sh.getRange(2,1,last-1,1).getDisplayValues();
+  for(let i=ids.length-1;i>=0;i--){
+    if(String(ids[i][0]||'')===id){
+      sh.deleteRow(i+2);
+      SpreadsheetApp.flush();
+      return {ok:true,deleted:true,id:id,message:'تم حذف التوقيع المحدد'};
+    }
+  }
+  return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
+}
+function deletePortalSignature_(ss,data){
+  const id=String(data.id||'').trim();
+  const password=String(data.password||'');
+  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
+  if(!/^[a-f0-9]{32,64}$/i.test(id)) return {ok:false,error:'معرّف التوقيع غير صالح'};
+  const sh=portalSignaturesSheet_(ss);
+  const last=sh.getLastRow();
+  if(last<2) return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
+  const ids=sh.getRange(2,1,last-1,1).getDisplayValues();
+  for(let i=ids.length-1;i>=0;i--){
+    if(String(ids[i][0]||'')===id){
+      sh.deleteRow(i+2);
+      SpreadsheetApp.flush();
+      return {ok:true,deleted:true,id:id,message:'تم حذف التوقيع المحدد'};
+    }
+  }
+  return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
 }
 function employeeReport_(ss,token){
   const emp=findPortalToken_(ss,token);
