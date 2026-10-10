@@ -339,18 +339,29 @@ function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
   const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&String(e.name||'').trim());
   const sh=portalAccessCodeSheet_(ss);
   const existing=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues():[];
-  const rowByEmp=new Map();
-  existing.forEach((r,i)=>{const id=String(r[2]||'');if(id&&!rowByEmp.has(id))rowByEmp.set(id,i+2);});
+  const rowsByEmp=new Map();
+  existing.forEach((r,i)=>{
+    const id=String(r[2]||'');
+    if(id){
+      if(!rowsByEmp.has(id))rowsByEmp.set(id,[]);
+      rowsByEmp.get(id).push(i+2);
+    }
+  });
+  const tokenSheet=portalTokenSheet_(ss);
+  const tokenRows=tokenSheet.getDataRange().getDisplayValues();
   employees.forEach(emp=>{
     const id=String(emp.id),name=String(emp.name||'').trim();
-    const existingRow=rowByEmp.get(id);
-    if(existingRow){
-      const currentName=String(sh.getRange(existingRow,4).getDisplayValue()||'').trim();
-      if(currentName!==name)sh.getRange(existingRow,4).setValue(name);
+    const existingRows=rowsByEmp.get(id)||[];
+    if(existingRows.length){
+      // Update the display name on every existing row for this employee.
+      // Keep all existing access codes and tokens unchanged.
+      existingRows.forEach(row=>{
+        const currentName=String(sh.getRange(row,4).getDisplayValue()||'').trim();
+        if(currentName!==name)sh.getRange(row,4).setValue(name);
+      });
       return;
     }
     let token='';
-    let tokenRows=portalTokenSheet_(ss).getDataRange().getDisplayValues();
     for(let i=1;i<tokenRows.length;i++){
       if(String(tokenRows[i][1]||'')===id&&String(tokenRows[i][5]||'all')==='all'){
         const candidate=String(tokenRows[i][0]||'');
@@ -364,8 +375,9 @@ function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
     if(!token)return;
     const code=portalNewAccessCode_(ss);
     const row=[code,token,id,name,'all','TRUE',new Date()];
-    sh.getRange(sh.getLastRow()+1,1,1,7).setValues([row]);
-    rowByEmp.set(id,sh.getLastRow());
+    const newRow=sh.getLastRow()+1;
+    sh.getRange(newRow,1,1,7).setValues([row]);
+    rowsByEmp.set(id,[newRow]);
   });
   SpreadsheetApp.flush();
   const last=sh.getLastRow();
