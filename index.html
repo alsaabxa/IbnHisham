@@ -184,7 +184,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 const KEY='ibnhisham_attendance_v1';
 const JOBS=['مديرة المدرسة','وكيلة','موجهة طلابية','م/ إداري','معلمة','مستخدمة'];
 const APPROVED_EMPLOYEES=[
-{"id":"staff-01","name":"مرتفت خليل محمود سمندر","job":"مديرة المدرسة"},
+{"id":"staff-01","name":"مرفت خليل محمود سمندر","job":"مديرة المدرسة"},
 {"id":"staff-02","name":"هند هاشم علي الحجاجي","job":"وكيلة"},
 {"id":"staff-03","name":"عهود سعد منشط اللحجي","job":"وكيلة"},
 {"id":"staff-04","name":"حمده سلامه عابد الحربي","job":"موجهة طلابية"},
@@ -235,7 +235,7 @@ const initialEmployeeNames=new Set(state.employees.map(e=>String(e.name||'').tri
 const initialCustomById=new Map();
 cachedCustomEmployees.forEach(e=>{const id=String(e.id||'').trim(),name=String(e.name||'').trim();if(id&&!initialApprovedIds.has(id)&&name&&!initialEmployeeNames.has(name)){initialCustomById.set(id,{...e});initialEmployeeNames.add(name)}});
 state.employees.push(...initialCustomById.values());
-try{const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');state.employees.forEach(e=>{if(edits[e.id]){e.name=edits[e.id].name||e.name;e.job=edits[e.id].job||e.job}})}catch(e){}state.settings.manager='مرتفت خليل محمود سمندر';
+try{const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');state.employees.forEach(e=>{if(edits[e.id]){e.name=edits[e.id].name||e.name;e.job=edits[e.id].job||e.job}})}catch(e){}state.settings.manager='مرفت خليل محمود سمندر';
 state.actions=Array.isArray(state.actions)?state.actions:[];state.pendingDeletes=Array.isArray(state.pendingDeletes)?state.pendingDeletes:[];
 
 async function apiGet(action){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return null;try{const r=await fetch(url+'?action='+encodeURIComponent(action),{cache:'no-store'});return await r.json()}catch(e){console.warn('API GET',e);return null}}
