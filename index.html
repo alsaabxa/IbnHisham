@@ -525,11 +525,11 @@ function formB(e,y,m,force){
  Object.keys(r.L).forEach(d=>(r.L[d]||[]).forEach(x=>seen.add(lateKey(x))));
  const employeeLates=state.lates.filter(x=>sameEmployeeRecord(x,e)).map(x=>({x,d:parseDateSafe(x.date)})).filter(v=>v.d);
  const exactLates=employeeLates.filter(v=>{const p=hparts(v.d);return p.y===y&&p.m===m;});
- const monthFallback=exactLates.length?[]:employeeLates.filter(v=>hparts(v.d).m===m);
+ const monthFallback=employeeLates.filter(v=>hparts(v.d).m===m);
  exactLates.concat(monthFallback).forEach(v=>{const x=v.x,k=lateKey(x),p=hparts(v.d);if(seen.has(k))return;(r.L[p.d]=r.L[p.d]||[]).push(x);seen.add(k);});
  const allActions=(Array.isArray(state.actions)?state.actions:[]).filter(a=>sameEmployeeRecord(a,e)).map(a=>({a,d:parseDateSafe(a.date||a.reportDate||a.created)})).filter(v=>v.d);
  const exactActions=allActions.filter(v=>{const p=hparts(v.d);return p.y===y&&p.m===m;});
- const monthActions=(exactActions.length?exactActions:allActions.filter(v=>hparts(v.d).m===m)).map(v=>v.a);
+ const monthActions=exactActions.concat(allActions.filter(v=>hparts(v.d).m===m)).filter((v,i,a)=>a.findIndex(q=>String(q.a.id||q.a.created||q.a.text)===String(v.a.id||v.a.created||v.a.text))===i).map(v=>v.a);
  if(!force&&!Object.keys(r.L).length&&!monthActions.length)return '';
  const n=Math.max(30,monthLen(y,m)),today=dateOnly(new Date());let tot=0,body='';
  for(let i=1;i<=n;i++){const dt=h2g(y,m,i),wd=dt?dt.getDay():-1;if(!dt||wd===5||wd===6)continue;const ls=r.L[i];let st='',arr='',mn='',rs='';if(ls){st='حاضرة'}else if(dt&&dateOnly(dt)<=today){st='حاضرة'}if(ls){const mm=ls.reduce((s,x)=>s+(Number(x.minutes)||0),0),f=ls.find(x=>x.arrival);arr=f?fmtT(f.arrival):'';if(mm){mn=ar(mm)+' دقيقة';tot+=mm}rs=ls.map(x=>x.reason).filter(Boolean).join('، ')}body+='<tr>'+bDateCell(dt,i)+'<td>'+WDF.format(dt||new Date())+'</td><td>'+st+'</td><td>'+arr+'</td><td>'+mn+'</td><td>'+rs+'</td></tr>'}
