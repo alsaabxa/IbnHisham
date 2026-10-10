@@ -754,7 +754,11 @@ function renderSharedSigningCodes(codes,sharedUrl){
  codes.forEach((item,i)=>{
   const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),waTd=document.createElement('td'),saveTd=document.createElement('td');
   n.textContent=String(i+1);name.textContent=String(item.name||'');
-  const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
+  const codeControls=document.createElement('div');codeControls.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap';
+  const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';
+  const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='btn secondary';copyBtn.textContent='نسخ الرمز';copyBtn.setAttribute('aria-label','نسخ رمز '+String(item.name||'الموظفة'));
+  copyBtn.onclick=async()=>{const code=String(inp.value||'').trim();if(!code){alert('لا يوجد رمز لنسخه');return;}try{await navigator.clipboard.writeText(code);copyBtn.textContent='تم النسخ ✓';setTimeout(()=>{copyBtn.textContent='نسخ الرمز';},1800);}catch(e){window.prompt('انسخي الرمز يدويًا:',code);}};
+  codeControls.append(inp,copyBtn);codeTd.appendChild(codeControls);
   const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
   btn.onclick=async()=>{const pin=sharedAdminPin();if(pin===null)return;btn.disabled=true;btn.textContent='جارٍ الحفظ...';
    try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;try{const saved=JSON.parse(sessionStorage.getItem(SHARED_CODES_SESSION_KEY)||'null');if(saved&&Array.isArray(saved.codes)){const match=saved.codes.find(x=>String(x.empId)===String(item.empId));if(match)match.code=r.code;sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify(saved));}}catch(e){}btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
@@ -776,17 +780,29 @@ async function setSharedSigningState(enabled){
   if(stateBox)stateBox.textContent=r.enabled?'حالة الرابط: مفعّل. يمكن للموظفات الدخول باستخدام الرموز الحالية.':'حالة الرابط: متوقف مؤقتًا. لن تعمل الرموز حتى إعادة التفعيل.';
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
+async function syncBeforeEmployeeCodes(){
+ for(let i=0;i<20;i++){
+  const r=await syncToSheets();
+  if(r&&r.ok)return true;
+  if(r&&r.ok===false&&!syncBusy)return false;
+  await new Promise(resolve=>setTimeout(resolve,250));
+ }
+ return false;
+}
 async function generateSharedSigningCodes(){
  const status=_g('sharedCodesStatus');if(!status)return;
- if(!confirm('سيتم إصدار رموز جديدة لجميع الموظفات، وستتوقف الرموز السابقة عن العمل. هل تتابعين؟'))return;
- const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ إنشاء الرموز...';
+ if(!confirm('سيتم إنشاء رموز للموظفات اللاتي لا يملكن رمزًا فقط، مع الحفاظ على الرموز الحالية. هل تتابعين؟'))return;
+ const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ مزامنة قائمة الموظفات ثم إكمال الرموز الناقصة...';
+ const synced=await syncBeforeEmployeeCodes();if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ تحققي من الاتصال ثم حاولي مرة أخرى.';return;}
+ status.textContent='جارٍ إكمال الرموز الناقصة...';
  try{const r=await apiPost('generateEmployeeAccessCodes',{adminPin:pin,portalBaseUrl:window.location.origin+window.location.pathname});
   if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر إنشاء الرموز';return;}
   renderSharedSigningCodes(r.codes||[],r.sharedUrl);status.textContent='تم إصدار '+(r.codes||[]).length+' رمزًا. احتفظي بالجدول في مكان آمن.';
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
 async function loadSharedSigningCodes(){
- const status=_g('sharedCodesStatus');if(!status)return;const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ تحميل الرموز...';
+ const status=_g('sharedCodesStatus');if(!status)return;const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ مزامنة الموظفات وتحميل الرموز...';
+ const synced=await syncBeforeEmployeeCodes();if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ تحققي من الاتصال ثم حاولي مرة أخرى.';return;}
  try{const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
   if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر تحميل الرموز';return;}
   renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');status.textContent='يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
@@ -1113,10 +1129,34 @@ function startPortalPrintWindow(){
 }
 
 function printPortalCompactReport(){
- document.body.classList.add('portal-print-mode');
- window.addEventListener('afterprint',()=>document.body.classList.remove('portal-print-mode'),{once:true});
- window.print();
- setTimeout(()=>document.body.classList.remove('portal-print-mode'),3000);
+ // Use a dedicated print document so mobile browsers do not fall back
+ // to the full portal layout when switching from screen to print media.
+ const report=document.getElementById('portalPrintReport');
+ if(!report){
+  document.body.classList.add('portal-print-mode');
+  window.print();
+  return;
+ }
+ const w=window.open('','_blank');
+ if(!w){
+  alert('يرجى السماح بفتح نافذة التقرير، أو فتح الرابط في المتصفح ثم المحاولة مرة أخرى.');
+  return;
+ }
+ const reportHtml=report.outerHTML;
+ w.document.open();
+ w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقرير الغياب والتأخير</title><style>@page{size:A4 portrait;margin:7mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#000;font:8pt/1.25 Cairo,Arial,sans-serif}#portalPrintReport{display:block!important;width:100%;font:8pt/1.25 Cairo,Arial,sans-serif;color:#000}#portalPrintReport .phead{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:5px;margin-bottom:5px}#portalPrintReport .phead div{display:flex;flex-direction:column;font-size:9pt;line-height:1.4}#portalPrintReport .phead img{height:43px;max-width:65px;object-fit:contain}#portalPrintReport .pmeta{text-align:center;display:flex;flex-direction:column;gap:1px;margin:3px 0}#portalPrintReport .pmeta b:first-child{font-size:10pt}#portalPrintReport h1{text-align:center;font-size:14pt;margin:4px 0 0}#portalPrintReport .psub{text-align:center;font-size:7.5pt;margin:1px 0 5px}#portalPrintReport .pemp{display:flex;justify-content:space-between;gap:8px;border:1px solid #555;padding:4px;margin:4px 0;font-size:8pt}#portalPrintReport h2{font-size:10pt;margin:5px 0 3px;border-bottom:1px solid #555;padding-bottom:2px}#portalPrintReport .ptable{width:100%;table-layout:fixed;border-collapse:collapse;font-size:7pt;direction:rtl}#portalPrintReport .ptable th,#portalPrintReport .ptable td{border:1px solid #444;text-align:center;vertical-align:middle;padding:2px 1px;white-space:normal;overflow-wrap:anywhere;line-height:1.15}#portalPrintReport .ptable th{background:#e9eef2;font-weight:800}#portalPrintReport .pdate{display:flex;flex-direction:column;line-height:1.15;white-space:normal}#portalPrintReport .pdate b{font-size:6.6pt}#portalPrintReport .pdate small{font-size:6.3pt}#portalPrintReport .ptotal{font-weight:800;margin:3px 0;font-size:7.5pt}#portalPrintReport .psign{display:flex;justify-content:space-between;gap:15px;margin-top:14px;font-size:8pt}#portalPrintReport .psign div{display:flex;flex-direction:column;gap:7px;min-width:45%}#portalPrintReport .psign span{font-weight:700}#portalPrintReport .ptable th,#portalPrintReport .ptable td{-webkit-print-color-adjust:exact;print-color-adjust:exact}#portalSavedSignature{display:block!important}#portalSavedSignature img{max-width:100%;max-height:70px;object-fit:contain}.print-actions{text-align:center;padding:12px;margin:0 auto 10px;position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd}.print-actions button{border:0;border-radius:8px;padding:10px 18px;background:#0a8a96;color:#fff;font:700 14px Arial;cursor:pointer}@media print{.print-actions{display:none!important}#portalPrintReport{display:block!important}}</style></head><body><div class="print-actions"><button onclick="window.print()">طباعة التقرير / حفظ PDF</button><p>إذا لم تظهر نافذة الطباعة تلقائيًا، اضغطي الزر أعلاه.</p></div>'+reportHtml+'</body></html>');
+ w.document.close();
+ // Keep the compact report visible in the standalone preview before and after printing on mobile browsers.
+ try{
+  w.addEventListener('afterprint',function(){
+   const printedReport=w.document.getElementById('portalPrintReport');
+   if(printedReport){printedReport.style.setProperty('display','block','important');printedReport.style.setProperty('visibility','visible','important');printedReport.style.setProperty('opacity','1','important');}
+   const actions=w.document.querySelector('.print-actions');if(actions)actions.style.display='block';
+  });
+  const visibleReport=w.document.getElementById('portalPrintReport');
+  if(visibleReport){visibleReport.style.setProperty('display','block','important');visibleReport.style.setProperty('visibility','visible','important');visibleReport.style.setProperty('opacity','1','important');}
+  w.focus();
+ }catch(e){}
 }
 
 function printPortalOriginalReport(){
