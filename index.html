@@ -934,8 +934,12 @@ async function submitPortalSignature(){
   const view=document.getElementById('portalSavedSignature');
   if(view){view.innerHTML='<img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+c.toDataURL('image/png')+'">';}
   c.style.display='none';
+  // Re-enable all buttons after the save request; only hide the signing controls.
+  controls.forEach(b=>b.disabled=false);
   const signControls=document.getElementById('portalSignControls');
   if(signControls)signControls.style.display='none';
+  const printControls=document.getElementById('portalPrintControls');
+  if(printControls){printControls.style.display='flex';printControls.querySelectorAll('button').forEach(b=>b.disabled=false);}
   const thankYou=document.getElementById('portalThankYou');
   if(thankYou)thankYou.style.display='block';
   status.textContent='✓ تم التوقيع بنجاح';
