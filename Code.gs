@@ -416,7 +416,17 @@ function findPortalToken_(ss,token){
   const values=portalTokenSheet_(ss).getDataRange().getDisplayValues();
   for(let i=1;i<values.length;i++){
     if(String(values[i][0]||'')===String(token)){
-      return {token:String(values[i][0]),id:String(values[i][1]||''),name:String(values[i][2]||'').trim(),job:String(values[i][3]||'').trim(),reportType:String(values[i][5]||'all')||'all'};
+      const id=String(values[i][1]||'').trim();
+      let name=String(values[i][2]||'').trim();
+      let job=String(values[i][3]||'').trim();
+      // Always use the current employee name/job from the master Employees sheet.
+      // Portal tokens can outlive name corrections, so their stored copy may be stale.
+      const current=readSheet_(ss,CONFIG.sheets.employees).find(e=>String(e.id||'').trim()===id);
+      if(current){
+        name=String(current.name||name).trim();
+        job=String(current.job||job).trim();
+      }
+      return {token:String(values[i][0]),id:id,name:name,job:job,reportType:String(values[i][5]||'all')||'all'};
     }
   }
   return null;
