@@ -486,13 +486,21 @@ function saveEmployeeSignature_(ss,data){
   const image=String(data.data||'');
   if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image))return {ok:false,error:'بيانات التوقيع غير صالحة.'};
   if(image.length>1500000)return {ok:false,error:'حجم التوقيع كبير؛ امسحي مساحة التوقيع وأعيدي التوقيع بحجم أصغر.'};
-  const sh=portalSignaturesSheet_(ss);
-  const existing=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,8).getDisplayValues():[];
-  if(existing.some(r=>String(r[1]||r[0]||'')===token||String(r[2]||'')===String(emp.id)))return {ok:false,error:'تم اعتماد توقيع هذه الموظفة مسبقًا. لا يمكن اعتماد توقيع آخر إلا بعد حذف التوقيع الحالي من الإدارة.'};
-  const now=new Date().toISOString();
-  upsertOne_(ss,PORTAL_SIGNATURES_SHEET_,{id:token,token:token,empId:emp.id,name:emp.name,type:reportType,data:image,at:now,createdAt:now});
-  SpreadsheetApp.flush();
-  return {ok:true,saved:true,at:now,message:'تم حفظ التوقيع بنجاح'};
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000))return {ok:false,error:'الخدمة مشغولة بحفظ عملية أخرى. انتظري قليلًا ثم حاولي مرة أخرى.'};
+  try{
+    const sh=portalSignaturesSheet_(ss);
+    const last=sh.getLastRow();
+    const existing=last>1?sh.getRange(2,1,last-1,3).getDisplayValues():[];
+    if(existing.some(r=>String(r[1]||r[0]||'')===token||String(r[2]||'')===String(emp.id)))return {ok:false,error:'تم اعتماد توقيع هذه الموظفة مسبقًا. لا يمكن اعتماد توقيع آخر إلا بعد حذف التوقيع الحالي من الإدارة.'};
+    const now=new Date().toISOString();
+    const row=[token,token,String(emp.id),String(emp.name||''),reportType,image,now,now];
+    sh.getRange(sh.getLastRow()+1,1,1,row.length).setValues([row]);
+    SpreadsheetApp.flush();
+    return {ok:true,saved:true,at:now,message:'تم حفظ التوقيع بنجاح'};
+  }finally{
+    lock.releaseLock();
+  }
 }
 function listPortalSignatures_(ss){
   return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).map(r=>({id:String(r.id||r.token||''),name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||''})).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
