@@ -736,7 +736,11 @@ function renderSharedSigningCodes(codes,sharedUrl){
  codes.forEach((item,i)=>{
   const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),waTd=document.createElement('td'),saveTd=document.createElement('td');
   n.textContent=String(i+1);name.textContent=String(item.name||'');
-  const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
+  const codeControls=document.createElement('div');codeControls.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap';
+   const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';
+   const copyBtn=document.createElement('button');copyBtn.type='button';copyBtn.className='btn secondary';copyBtn.textContent='نسخ الرمز';copyBtn.setAttribute('aria-label','نسخ رمز '+String(item.name||'الموظفة'));
+   copyBtn.onclick=async()=>{const code=String(inp.value||'').trim();if(!code){alert('لا يوجد رمز لنسخه');return;}try{await navigator.clipboard.writeText(code);copyBtn.textContent='تم النسخ ✓';setTimeout(()=>{copyBtn.textContent='نسخ الرمز';},1800);}catch(e){window.prompt('انسخي الرمز يدويًا:',code);}};
+   codeControls.append(inp,copyBtn);codeTd.appendChild(codeControls);
   const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
   btn.onclick=async()=>{const pin=sharedAdminPin();if(pin===null)return;btn.disabled=true;btn.textContent='جارٍ الحفظ...';
    try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;try{const saved=JSON.parse(sessionStorage.getItem(SHARED_CODES_SESSION_KEY)||'null');if(saved&&Array.isArray(saved.codes)){const match=saved.codes.find(x=>String(x.empId)===String(item.empId));if(match)match.code=r.code;sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify(saved));}}catch(e){}btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
