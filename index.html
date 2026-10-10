@@ -1070,10 +1070,20 @@ function startPortalPrintWindow(){
 }
 
 function printPortalCompactReport(){
+ // Keep the print layout active until the native print flow finishes.
+ // A short timeout breaks the layout on slower mobile print dialogs.
  document.body.classList.add('portal-print-mode');
- window.addEventListener('afterprint',()=>document.body.classList.remove('portal-print-mode'),{once:true});
+ const clearPortalPrintMode=()=>{
+  document.body.classList.remove('portal-print-mode');
+  window.removeEventListener('afterprint',clearPortalPrintMode);
+  document.removeEventListener('visibilitychange',clearPortalPrintMode);
+ };
+ window.addEventListener('afterprint',clearPortalPrintMode,{once:true});
+ // Some mobile browsers return from the system print sheet without afterprint.
+ document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && !document.body.classList.contains('portal-print-mode')) clearPortalPrintMode();
+ });
  window.print();
- setTimeout(()=>document.body.classList.remove('portal-print-mode'),3000);
 }
 
 function printPortalOriginalReport(){
