@@ -820,19 +820,34 @@ function clearPortalSignature(){
  const ctx=c.getContext('2d');if(!ctx)return;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,c.width,c.height);ctx.restore();
  const status=document.getElementById('portalSignatureStatusText');if(status)status.textContent='تم مسح التوقيع من مساحة الرسم.';
 }
+let portalSignatureSubmitting=false;
 async function submitPortalSignature(){
  const c=document.getElementById('portalSignatureCanvas'),status=document.getElementById('portalSignatureStatusText');
- if(!c||!status)return;
+ if(!c||!status||portalSignatureSubmitting)return;
  const blank=document.createElement('canvas');blank.width=c.width;blank.height=c.height;
  if(c.toDataURL()===blank.toDataURL()){status.textContent='يرجى التوقيع داخل المساحة أولاً.';return}
  const token=window.__portalSignToken,reportType=window.__portalReportType||'all';
+ portalSignatureSubmitting=true;
+ const controls=c.parentElement?c.parentElement.querySelectorAll('button'):[];
+ controls.forEach(b=>b.disabled=true);
  status.textContent='جارٍ إرسال التوقيع وحفظه...';
  try{
   const r=await apiPost('saveEmployeeSignature',{token:token,reportType:reportType,data:c.toDataURL('image/png')});
-  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر حفظ التوقيع. حاولي مرة أخرى.';return}
-  status.textContent='✓ تم اعتماد التوقيع وحفظه بنجاح — '+(r.at||'');
-  const view=document.getElementById('portalSavedSignature');if(view){view.innerHTML='<img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+c.toDataURL('image/png')+'">';}
- }catch(e){status.textContent='تعذر الاتصال بالخدمة. لم يتم تأكيد حفظ التوقيع.'}
+  if(!r||!r.ok){
+   status.textContent=(r&&r.error)||'تعذر حفظ التوقيع. حاولي مرة أخرى.';
+   portalSignatureSubmitting=false;controls.forEach(b=>b.disabled=false);return;
+  }
+  const view=document.getElementById('portalSavedSignature');
+  if(view){view.innerHTML='<img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+c.toDataURL('image/png')+'">';}
+  c.style.display='none';
+  const actionRow=c.nextElementSibling;
+  if(actionRow)actionRow.style.display='none';
+  status.textContent='✓ تم التوقيع بنجاح';
+  status.style.cssText='font-size:15px;font-weight:700;color:#17805b;background:#f2faf6;border:1px solid #b7e4cf;border-radius:10px;padding:12px;margin-top:10px';
+ }catch(e){
+  status.textContent='تعذر الاتصال بالخدمة. لم يتم تأكيد حفظ التوقيع.';
+  portalSignatureSubmitting=false;controls.forEach(b=>b.disabled=false);
+ }
 }
 
 async function initEmployeePortal(){
