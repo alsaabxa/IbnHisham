@@ -1070,19 +1070,12 @@ function startPortalPrintWindow(){
 }
 
 function printPortalCompactReport(){
- // Keep the print layout active until the native print flow finishes.
- // A short timeout breaks the layout on slower mobile print dialogs.
+ // Keep the compact layout active until the native print flow finishes.
+ // Do not use a short timeout: mobile print dialogs may take longer to open.
  document.body.classList.add('portal-print-mode');
- const clearPortalPrintMode=()=>{
+ window.addEventListener('afterprint',()=>{
   document.body.classList.remove('portal-print-mode');
-  window.removeEventListener('afterprint',clearPortalPrintMode);
-  document.removeEventListener('visibilitychange',clearPortalPrintMode);
- };
- window.addEventListener('afterprint',clearPortalPrintMode,{once:true});
- // Some mobile browsers return from the system print sheet without afterprint.
- document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && !document.body.classList.contains('portal-print-mode')) clearPortalPrintMode();
- });
+ },{once:true});
  window.print();
 }
 
