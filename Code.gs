@@ -179,30 +179,39 @@ function upsertMany_(ss,name,records){
     Absences:['id','empId','name','job','type','month','from','to','days','ref','reportDate','place','note','created'],
     Lateness:['id','empId','name','job','date','arrival','start','minutes','reason','note','created'],
     Signatures:['id','empId','name','type','data','at','createdAt'],
-    Settings:['key','value','updatedAt']
+    Settings:['key','value','updatedAt'],
+    Actions:['id','empId','name','job','date','type','text','note','created']
   }[name]||Object.keys(input[0]);
   ensureHeaders_(sh,preferred);
-  const headers=getHeaders_(sh),keyField=name==='Settings'?'key':'id',keyCol=headers.indexOf(keyField)+1;
-  if(!headers.length||keyCol<1){
+  const headers=getHeaders_(sh),keyField=name==='Settings'?'key':'id',keyCol=headers.indexOf(keyField);
+  if(!headers.length||keyCol<0){
     input.forEach(r=>upsertOne_(ss,name,r));
     return input.length;
   }
-  const last=sh.getLastRow(),rowByKey=new Map();
-  if(last>1){
-    const keys=sh.getRange(2,keyCol,last-1,1).getDisplayValues();
-    keys.forEach((r,i)=>{const k=String(r[0]||'');if(k)rowByKey.set(k,i+2);});
-  }
-  // Collapse duplicate IDs in the same sync; the last record wins, as in the old sequential upsert.
+
+  // Collapse repeated keys first; last record wins, matching the prior behavior.
   const latestByKey=new Map();
   input.forEach(r=>{const k=String(r[keyField]||'');if(k)latestByKey.set(k,r);});
-  const append=[];
+  if(!latestByKey.size)return 0;
+
+  // Read the table once, apply all updates in memory, and write once.
+  // This avoids one Spreadsheet service call per record during every sync.
+  const lastRow=sh.getLastRow();
+  const rows=lastRow>1?sh.getRange(2,1,lastRow-1,headers.length).getValues():[];
+  const rowByKey=new Map();
+  rows.forEach((row,i)=>{const k=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim();if(k)rowByKey.set(k,i);});
+  const changed=[];
   latestByKey.forEach((record,key)=>{
     const values=headers.map(h=>record[h]===undefined?'':normalize_(record[h]));
-    const row=rowByKey.get(key);
-    if(row)sh.getRange(row,1,1,headers.length).setValues([values]);
-    else append.push(values);
+    const index=rowByKey.get(key);
+    if(index!==undefined){
+      rows[index]=values;
+    }else{
+      rows.push(values);
+    }
+    changed.push(key);
   });
-  if(append.length)sh.getRange(sh.getLastRow()+1,1,append.length,headers.length).setValues(append);
+  if(rows.length)sh.getRange(2,1,rows.length,headers.length).setValues(rows);
   return latestByKey.size;
 }
 function upsertSignatures_(ss,obj){
