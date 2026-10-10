@@ -680,6 +680,52 @@ const total=sec==='absence'?abs.reduce((a,x)=>a+(Number(x.days)||0),0):late.redu
 _g('report').innerHTML=repHead()+'<div class="report-head"><h2>'+title+' — A</h2><div class="muted">'+(emp?emp.name:'جميع الموظفات')+'</div><div class="report-period">'+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div></div><div class="table-wrap"><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div><div style="margin-top:16px;font-size:12px">إجمالي السجلات: '+(sec==='absence'?abs.length:late.length)+' — إجمالي الأيام/الدقائق: '+total+'</div>'+repFoot(emp)}
 
 
+function clearSharedSigningCodes(){
+ const b=_g('sharedCodesResult'),l=_g('sharedSignLink'),s=_g('sharedCodesStatus');
+ if(b)b.innerHTML='';if(l)l.innerHTML='';if(s)s.textContent='تم إخفاء الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';
+}
+function sharedAdminPin(){return window.prompt('أدخلي الرقم الإداري لإدارة رموز التوقيع:');}
+function renderSharedSigningCodes(codes,sharedUrl){
+ const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
+ const linkBox=_g('sharedSignLink');
+ if(sharedUrl&&linkBox){
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff';
+  const a=document.createElement('a');a.href=sharedUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent='فتح رابط التوقيع الموحّد';
+  const cp=document.createElement('button');cp.type='button';cp.className='btn secondary';cp.textContent='نسخ الرابط';cp.onclick=async()=>{try{await navigator.clipboard.writeText(sharedUrl);cp.textContent='تم النسخ'}catch(e){window.prompt('انسخي الرابط يدويًا:',sharedUrl)}};
+  row.append(a,cp);linkBox.replaceChildren(row);
+ }
+ if(!codes||!codes.length){box.textContent='لا توجد رموز لعرضها.';return}
+ const table=document.createElement('table');table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرمز القابل للتعديل</th><th>حفظ</th></tr></thead><tbody></tbody>';
+ const tbody=table.querySelector('tbody');
+ codes.forEach((item,i)=>{
+  const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),saveTd=document.createElement('td');
+  n.textContent=String(i+1);name.textContent=String(item.name||'');
+  const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
+  const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
+  btn.onclick=async()=>{const pin=sharedAdminPin();if(pin===null)return;btn.disabled=true;btn.textContent='جارٍ الحفظ...';
+   try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
+   catch(e){alert('تعذر الاتصال بالخدمة');btn.textContent='حفظ الرمز';}finally{btn.disabled=false;}
+  };
+  saveTd.appendChild(btn);tr.append(n,name,codeTd,saveTd);tbody.appendChild(tr);
+ });
+ box.appendChild(table);
+}
+async function generateSharedSigningCodes(){
+ const status=_g('sharedCodesStatus');if(!status)return;
+ if(!confirm('سيتم إصدار رموز جديدة لجميع الموظفات، وستتوقف الرموز السابقة عن العمل. هل تتابعين؟'))return;
+ const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ إنشاء الرموز...';
+ try{const r=await apiPost('generateEmployeeAccessCodes',{adminPin:pin,portalBaseUrl:window.location.origin+window.location.pathname});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر إنشاء الرموز';return;}
+  renderSharedSigningCodes(r.codes||[],r.sharedUrl);status.textContent='تم إصدار '+(r.codes||[]).length+' رمزًا. احتفظي بالجدول في مكان آمن.';
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+}
+async function loadSharedSigningCodes(){
+ const status=_g('sharedCodesStatus');if(!status)return;const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ تحميل الرموز...';
+ try{const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر تحميل الرموز';return;}
+  renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');status.textContent='يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+}
 function clearPortalLinks(){
   const box=document.getElementById('portalLinksResult');
   const status=document.getElementById('portalLinksStatus');
