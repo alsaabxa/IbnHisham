@@ -876,11 +876,28 @@ async function initEmployeePortal(){
   abs.forEach(x=>{const m=String(x.month||x.from||x.reportDate||'غير محدد');months[m]=months[m]||{abs:0,late:0,minutes:0};months[m].abs++;});
   lates.forEach(x=>{const m=String(x.month||x.date||x.created||'غير محدد');months[m]=months[m]||{abs:0,late:0,minutes:0};months[m].late++;months[m].minutes+=Number(x.minutes)||0;});
   const bRows=Object.keys(months).sort().reverse().map(m=>[escH(m),months[m].abs,months[m].late,months[m].minutes]);
+  // Reuse the exact official Form A renderers from the Reports page for this employee portal.
+  const portalType=result.reportType||'all';
+  const showAbs=portalType==='all'||portalType==='absence';
+  const showLate=portalType==='all'||portalType==='late';
+  let officialFormsHtml='';
+  const savedPortalState={employees:state.employees,absences:state.absences,lates:state.lates};
+  try{
+   state.employees=[e];
+   state.absences=abs;
+   state.lates=lates;
+   const portalRange=annualRange({from:new Date(),to:new Date(),label:'سنوي'});
+   if(showAbs)officialFormsHtml+=formAAbsence(e,portalRange);
+   if(showLate)officialFormsHtml+=formA(e,portalRange);
+  }finally{
+   state.employees=savedPortalState.employees;
+   state.absences=savedPortalState.absences;
+   state.lates=savedPortalState.lates;
+  }
   const summary='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+abs.length+'</b> غياب</div><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+lates.length+'</b> تأخير</div><div style="padding:10px 14px;background:#f5f8fa;border:1px solid #dce5eb;border-radius:10px"><b>'+actions.length+'</b> إجراء</div></div>';
   root.innerHTML=
    '<div style="background:#fff;border:1px solid #dce5eb;border-radius:16px;padding:18px;margin-bottom:16px"><h2 style="margin:0;color:#0f2a43">'+escH(e.name||'')+'</h2><p style="margin:5px 0;color:#6b7c8f">'+escH(e.job||'')+'</p>'+summary+'<div style="font-size:12px;color:#6b7c8f">هذا الرابط للعرض فقط ولا يتيح تعديل أو حذف الرصد.</div></div>'+
-   section('نموذج A — السجل التفصيلي',table(['النوع','من','إلى','النوع/السبب','الأيام/الدقائق','ملاحظات'],aRows))+
-   section('نموذج B — الملخص الشهري',table(['الشهر','أيام/سجلات الغياب','عدد مرات التأخير','إجمالي دقائق التأخير'],bRows))+
+   '<div id="portalOfficialForms" style="background:#fff;border:1px solid #dce5eb;border-radius:12px;padding:10px;margin:16px 0;overflow-x:auto">'+officialFormsHtml+'</div>'+
    section('الإجراءات',actions.length?table(['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],actions.map(x=>[dateCell(x.date),escH(x.type||''),escH(x.text||''),escH(x.note||'')])):empty)+
    '<div style="text-align:center;color:#6b7c8f;font-size:11px;padding:14px">تاريخ التقرير: '+portalDateHtml(new Date())+'</div>' +
    '<style>@media print{button,#portalSignatureCanvas{display:none!important}#portalSavedSignature{display:block!important}body{background:#fff!important}}</style>' +
@@ -893,31 +910,10 @@ async function initEmployeePortal(){
 }
 
 function printPortalOriginalReport(){
- const data=window.__portalOriginalReport;
- if(!data||!data.employee){alert('بيانات التقرير لم تكتمل بعد. حدّثي الرابط ثم حاولي مرة أخرى.');return}
- const e=data.employee,abs=Array.isArray(data.absences)?data.absences:[],lates=Array.isArray(data.lates)?data.lates:[];
- const type=data.reportType||'all';
- const showAbs=type==='all'||type==='absence',showLate=type==='all'||type==='late';
- const w=window.open('','_blank');
- if(!w){alert('تعذر فتح نافذة الطباعة. اسمحي بفتح النوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة.');return}
- const esc=v=>escH(v===undefined||v===null?'':v);
- const date=v=>v?portalDateHtml(v):'—';
- const table=(headers,rows)=>'<table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.map(row=>'<tr>'+row.map(v=>'<td>'+v+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+headers.length+'" class="empty">لا توجد سجلات لهذا النوع.</td></tr>')+'</tbody></table>';
- let body='';
- if(showAbs){
-  const rows=abs.slice().sort((a,b)=>String(b.from||b.reportDate||'').localeCompare(String(a.from||a.reportDate||''))).map((x,i)=>[i+1,esc(e.name),esc(e.job),esc(x.month||''),esc(x.type||''),date(x.from||x.reportDate),date(x.to),esc(x.days||''),esc(x.ref||'')]);
-  body+='<section><h2>تقرير الغياب</h2>'+table(['م','اسم الموظفة','المسمى الوظيفي','الشهر الهجري','نوع الغياب','من تاريخ','إلى تاريخ','الأيام','المرجع'],rows)+'<p class="total">إجمالي السجلات: '+ar(abs.length)+' — إجمالي الأيام: '+ar(abs.reduce((n,x)=>n+(Number(x.days)||0),0))+'</p></section>';
- }
- if(showLate){
-  const rows=lates.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))).map((x,i)=>[i+1,esc(e.name),esc(e.job),date(x.date),esc(x.start||''),esc(x.arrival||''),esc(x.minutes||''),esc(x.reason||'')]);
-  body+='<section><h2>تقرير التأخير</h2>'+table(['م','اسم الموظفة','المسمى الوظيفي','التاريخ','بداية الدوام','وقت الحضور','دقائق التأخير','السبب'],rows)+'<p class="total">إجمالي مرات التأخير: '+ar(lates.length)+' — إجمالي الدقائق: '+ar(lates.reduce((n,x)=>n+(Number(x.minutes)||0),0))+'</p></section>';
- }
- const reportTitle=type==='absence'?'تقرير الغياب':type==='late'?'تقرير التأخير':'تقرير الغياب والتأخير';
- const logo=typeof LOGO==='string'?LOGO:'';
- w.document.open();
- w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+reportTitle+' — '+esc(e.name)+'</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Cairo,Arial,sans-serif;color:#111;margin:0;font-size:11px}.head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:2px solid #173c54;padding-bottom:10px;margin-bottom:12px;gap:12px}.school{font-weight:800;line-height:1.8}.logo{height:58px;max-width:90px;object-fit:contain}.meta{text-align:left;font-weight:700;line-height:1.8}.title{text-align:center;font-size:18px;font-weight:900;margin:10px 0 3px}.sub{text-align:center;font-size:12px;margin:0 0 14px}.emp{border:1px solid #bbb;padding:8px 12px;margin-bottom:12px;display:flex;gap:25px;flex-wrap:wrap;font-weight:800}section{margin:12px 0 18px;break-inside:avoid}h2{font-size:15px;margin:0 0 8px;background:#eaf0f3;border:1px solid #9eafb8;padding:7px}table{width:100%;border-collapse:collapse;table-layout:auto;font-size:10px}th,td{border:1px solid #444;padding:5px 4px;text-align:center;vertical-align:middle}th{background:#eaf0f3;font-weight:900}td .portal-date{white-space:nowrap}.total{font-weight:800;margin:7px 0}.empty{text-align:center;padding:14px}.foot{display:flex;justify-content:space-around;gap:25px;margin-top:25px;font-weight:800;text-align:center}.foot div{min-width:220px}.foot span{display:block;margin-top:14px;font-weight:500}@media print{button{display:none}}</style></head><body><header class="head"><div class="school"><div>وزارة التعليم</div><div>إدارة تعليم مكة</div><div>مدرسة ابن هشام للطفولة المبكرة</div></div><img class="logo" src="'+logo+'" alt="الشعار"><div class="meta">نسخة للطباعة<br>تاريخ الإصدار: '+portalDateHtml(new Date())+'</div></header><div class="title">'+reportTitle+'</div><p class="sub">السجلات الأصلية المحفوظة في منصة ابن هشام</p><div class="emp"><span>اسم الموظفة: '+esc(e.name)+'</span><span>المسمى الوظيفي: '+esc(e.job)+'</span></div>'+body+'<footer class="foot"><div>الموظفة: '+esc(e.name)+'<span>التوقيع: ................................</span></div><div>مديرة المدرسة: مرفت خليل سمندر<span>التوقيع: ................................</span></div></footer><script>window.onload=function(){setTimeout(function(){window.focus();window.print()},350)};<\/script></body></html>');
- w.document.close();
+ // The portal already renders the same official Form A layouts used in Reports.
+ window.print();
 }
+
 
 const portalMode=new URLSearchParams(location.search).has('portal');
 if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();}
