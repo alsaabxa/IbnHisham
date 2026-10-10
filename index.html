@@ -902,7 +902,22 @@ async function submitPortalSignature(){
 }
 
 async function initEmployeePortal(){
- const token=new URLSearchParams(location.search).get('portal');
+ const params=new URLSearchParams(location.search),token=params.get('portal');
+ if(params.get('sign')==='1'&&!token){
+  document.body.innerHTML='<main dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:520px;margin:8vh auto;padding:22px;color:#172b3a;background:#f5f8fa"><section style="background:#fff;border:1px solid #dce5eb;border-radius:18px;padding:24px;box-shadow:0 8px 28px #0f2a4310"><h1 style="margin:0 0 8px;color:#0f2a43;font-size:23px">التوقيع الإلكتروني للموظفات</h1><p style="color:#526779">أدخلي رمزك الخاص لعرض تقريرك الرسمي فقط.</p><form id="sharedSignCodeForm"><label for="sharedSignCode" style="display:block;margin:14px 0 6px;font-weight:700">رمز الموظفة</label><input id="sharedSignCode" required autocomplete="one-time-code" maxlength="12" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #cbd7df;border-radius:10px;font-size:18px;text-transform:uppercase" placeholder="أدخلي الرمز هنا"><button id="sharedSignSubmit" type="submit" style="width:100%;margin-top:14px;border:0;border-radius:10px;padding:13px;background:#0f2a43;color:#fff;font-weight:700;font-size:16px;cursor:pointer">عرض تقريري</button><p id="sharedSignError" role="status" style="color:#b42318;margin-bottom:0"></p></form><p style="font-size:12px;color:#6b7c8f;margin-top:16px">إذا لم يعمل الرمز، تواصلي مع الإدارة لتأكيده أو تعديله.</p></section></main>';
+  document.getElementById('sharedSignCodeForm').addEventListener('submit',async ev=>{
+   ev.preventDefault();const btn=document.getElementById('sharedSignSubmit'),err=document.getElementById('sharedSignError');
+   const code=document.getElementById('sharedSignCode').value.trim().toUpperCase();btn.disabled=true;btn.textContent='جارٍ التحقق...';err.textContent='';
+   try{
+    const api=(state.settings&&state.settings.apiUrl||'').trim();if(!api)throw new Error('رابط الخدمة غير مضبوط في المنصة');
+    const response=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'redeemEmployeeAccessCode',data:{code:code}}),redirect:'follow'});
+    const result=await response.json();
+    if(!result||!result.ok||!result.token)throw new Error(result&&result.error||'الرمز غير صحيح');
+    location.replace(location.pathname+'?portal='+encodeURIComponent(result.token));
+   }catch(e){err.textContent=String(e&&e.message||'تعذر التحقق من الرمز');btn.disabled=false;btn.textContent='عرض تقريري';}
+  });
+  return true;
+ }
  if(!token)return false;
  document.body.innerHTML='<main id="employeePortalRoot" dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:1180px;margin:0 auto;padding:18px;color:#172b3a;background:#f5f8fa"><div style="background:#0f2a43;color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:16px"><h1 style="margin:0;font-size:22px">التقرير الخاص بالموظفة</h1><p style="margin:5px 0 0;opacity:.85">منصة ابن هشام للطفولة المبكرة</p></div><p>جارٍ تحميل التقرير...</p></main>';
  const root=document.getElementById('employeePortalRoot');
