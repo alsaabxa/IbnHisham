@@ -981,7 +981,7 @@ function printPortalOriginalReport(){
 }
 
 
-const portalMode=new URLSearchParams(location.search).has('portal');
+const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.has('portal')||portalParams.get('sign')==='1';
 if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();}
 
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingStartSummer','seasonMode','summerFrom','summerTo','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
