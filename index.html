@@ -809,12 +809,23 @@ async function generateSharedSigningCodes(){
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
 async function loadSharedSigningCodes(){
- const status=_g('sharedCodesStatus');if(!status)return;const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ مزامنة الموظفات وتحميل الرموز...';
- const synced=await syncBeforeEmployeeCodes();if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ تحققي من الاتصال ثم حاولي مرة أخرى.';return;}
- try{const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
-  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر تحميل الرموز';return;}
-  renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');status.textContent='يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
- }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+ const status=_g('sharedCodesStatus');if(!status)return;
+ const pin=sharedAdminPin();if(pin===null)return;
+ status.textContent='جارٍ تحميل الرموز مباشرة من Google Sheets...';
+ const box=_g('sharedCodesResult');if(box)box.textContent='يرجى الانتظار...';
+ try{
+  const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
+  if(!r||!r.ok){
+   status.textContent=(r&&r.error)||'تعذر تحميل الرموز';
+   if(box)box.textContent='تعذر تحميل قائمة الرموز. راجعي رسالة الحالة أعلاه ثم حاولي مرة أخرى.';
+   return;
+  }
+  renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');
+  status.textContent='تم تحميل '+(r.codes||[]).length+' رمزًا. يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
+ }catch(e){
+  status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث ثم أعيدي المحاولة.';
+  if(box)box.textContent='لم تصل استجابة من Google Apps Script.';
+ }
 }
 function clearPortalLinks(){
   const box=document.getElementById('portalLinksResult');
