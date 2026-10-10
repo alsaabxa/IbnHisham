@@ -1070,13 +1070,24 @@ function startPortalPrintWindow(){
 }
 
 function printPortalCompactReport(){
- // Keep the compact layout active until the native print flow finishes.
- // Do not use a short timeout: mobile print dialogs may take longer to open.
- document.body.classList.add('portal-print-mode');
- window.addEventListener('afterprint',()=>{
-  document.body.classList.remove('portal-print-mode');
- },{once:true});
- window.print();
+ // Use a dedicated print document so mobile browsers do not fall back
+ // to the full portal layout when switching from screen to print media.
+ const report=document.getElementById('portalPrintReport');
+ if(!report){
+  document.body.classList.add('portal-print-mode');
+  window.print();
+  return;
+ }
+ const w=window.open('','_blank');
+ if(!w){
+  alert('يرجى السماح بفتح نافذة التقرير، أو فتح الرابط في المتصفح ثم المحاولة مرة أخرى.');
+  return;
+ }
+ const reportHtml=report.outerHTML;
+ w.document.open();
+ w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تقرير الغياب والتأخير</title><style>@page{size:A4 portrait;margin:7mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#000;font:8pt/1.25 Cairo,Arial,sans-serif}#portalPrintReport{display:block!important;width:100%;font:8pt/1.25 Cairo,Arial,sans-serif;color:#000}#portalPrintReport .phead{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:5px;margin-bottom:5px}#portalPrintReport .phead div{display:flex;flex-direction:column;font-size:9pt;line-height:1.4}#portalPrintReport .phead img{height:43px;max-width:65px;object-fit:contain}#portalPrintReport .pmeta{text-align:center;display:flex;flex-direction:column;gap:1px;margin:3px 0}#portalPrintReport .pmeta b:first-child{font-size:10pt}#portalPrintReport h1{text-align:center;font-size:14pt;margin:4px 0 0}#portalPrintReport .psub{text-align:center;font-size:7.5pt;margin:1px 0 5px}#portalPrintReport .pemp{display:flex;justify-content:space-between;gap:8px;border:1px solid #555;padding:4px;margin:4px 0;font-size:8pt}#portalPrintReport h2{font-size:10pt;margin:5px 0 3px;border-bottom:1px solid #555;padding-bottom:2px}#portalPrintReport .ptable{width:100%;table-layout:fixed;border-collapse:collapse;font-size:7pt;direction:rtl}#portalPrintReport .ptable th,#portalPrintReport .ptable td{border:1px solid #444;text-align:center;vertical-align:middle;padding:2px 1px;white-space:normal;overflow-wrap:anywhere;line-height:1.15}#portalPrintReport .ptable th{background:#e9eef2;font-weight:800}#portalPrintReport .pdate{display:flex;flex-direction:column;line-height:1.15;white-space:normal}#portalPrintReport .pdate b{font-size:6.6pt}#portalPrintReport .pdate small{font-size:6.3pt}#portalPrintReport .ptotal{font-weight:800;margin:3px 0;font-size:7.5pt}#portalPrintReport .psign{display:flex;justify-content:space-between;gap:15px;margin-top:14px;font-size:8pt}#portalPrintReport .psign div{display:flex;flex-direction:column;gap:7px;min-width:45%}#portalPrintReport .psign span{font-weight:700}#portalPrintReport .ptable th,#portalPrintReport .ptable td{-webkit-print-color-adjust:exact;print-color-adjust:exact}#portalSavedSignature{display:block!important}#portalSavedSignature img{max-width:100%;max-height:70px;object-fit:contain}.print-actions{text-align:center;padding:12px;margin:0 auto 10px;position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd}.print-actions button{border:0;border-radius:8px;padding:10px 18px;background:#0a8a96;color:#fff;font:700 14px Arial;cursor:pointer}@media print{.print-actions{display:none!important}#portalPrintReport{display:block!important}}</style></head><body><div class="print-actions"><button onclick="window.print()">طباعة التقرير / حفظ PDF</button><p>إذا لم تظهر نافذة الطباعة تلقائيًا، اضغطي الزر أعلاه.</p></div>'+reportHtml+'</body></html>');
+ w.document.close();
+ try{w.focus();}catch(e){}
 }
 
 function printPortalOriginalReport(){
