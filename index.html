@@ -812,9 +812,13 @@ async function generateSharedSigningCodes(){
 async function loadSharedSigningCodes(){
  const status=_g('sharedCodesStatus');if(!status)return;
  const pin=sharedAdminPin();if(pin===null)return;
- status.textContent='جارٍ تحميل الرموز مباشرة من Google Sheets...';
+ status.textContent='جارٍ مزامنة أسماء الموظفات ثم تحميل الرموز...';
  const box=_g('sharedCodesResult');if(box)box.textContent='يرجى الانتظار...';
  try{
+  // Sync current employee names to Google Sheets before reading the code list,
+  // so spelling corrections appear beside existing codes without regenerating them.
+  const synced=await syncBeforeEmployeeCodes();
+  if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ لم يتم تحديث عرض الرموز. تحققي من الاتصال ثم حاولي مرة أخرى.';if(box)box.textContent='';return;}
   const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
   if(!r||!r.ok){
    status.textContent=(r&&r.error)||'تعذر تحميل الرموز';
