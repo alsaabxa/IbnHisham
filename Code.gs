@@ -40,14 +40,8 @@ function doPost(e){
     if(action==='generateEmployeeAccessCodes'){
       const d=body.data||{};
       if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
-      const created=createEmployeeLinks_(ss,'','all',String(d.portalBaseUrl||''));
-      if(!created.ok||!created.links||!created.links.length)return json_(created);
-      const sh=portalAccessCodeSheet_(ss),now=new Date();
-      const rows=created.links.map(x=>[portalNewAccessCode_(ss),String(x.token),String(x.id),String(x.name),String(x.reportType||'all'),'TRUE',now]);
-      if(sh.getLastRow()>1)sh.getRange(2,1,sh.getLastRow()-1,7).clearContent();
-      if(rows.length)sh.getRange(2,1,rows.length,7).setValues(rows);
-      SpreadsheetApp.flush();
-      return json_({ok:true,codes:rows.map(r=>({code:r[0],empId:r[2],name:r[3],reportType:r[4]})),sharedUrl:portalLinkBase_(d.portalBaseUrl)+'?sign=1'});
+      const codes=ensureEmployeeAccessCodes_(ss,String(d.portalBaseUrl||''));
+      return json_({ok:true,codes:codes,sharedUrl:portalLinkBase_(d.portalBaseUrl)+'?sign=1',message:'تمت إضافة الرموز الناقصة مع الحفاظ على الرموز الحالية.'});
     }
     if(action==='listEmployeeAccessCodes'){
       const d=body.data||{};
@@ -341,11 +335,46 @@ function portalNewAccessCode_(ss){
   do{code='';for(let i=0;i<10;i++)code+=chars.charAt(Math.floor(Math.random()*chars.length));}while(used.has(code));
   return code;
 }
-function listEmployeeAccessCodes_(ss){
+function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
+  const employees=readSheet_(ss,CONFIG.sheets.employees).filter(e=>e&&e.id&&String(e.name||'').trim());
   const sh=portalAccessCodeSheet_(ss);
-  if(sh.getLastRow()<2)return [];
-  return sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues().filter(r=>r[0]&&r[1])
+  const existing=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues():[];
+  const rowByEmp=new Map();
+  existing.forEach((r,i)=>{const id=String(r[2]||'');if(id&&!rowByEmp.has(id))rowByEmp.set(id,i+2);});
+  employees.forEach(emp=>{
+    const id=String(emp.id),name=String(emp.name||'').trim();
+    const existingRow=rowByEmp.get(id);
+    if(existingRow){
+      const currentName=String(sh.getRange(existingRow,4).getDisplayValue()||'').trim();
+      if(currentName!==name)sh.getRange(existingRow,4).setValue(name);
+      return;
+    }
+    let token='';
+    let tokenRows=portalTokenSheet_(ss).getDataRange().getDisplayValues();
+    for(let i=1;i<tokenRows.length;i++){
+      if(String(tokenRows[i][1]||'')===id&&String(tokenRows[i][5]||'all')==='all'){
+        const candidate=String(tokenRows[i][0]||'');
+        if(candidate&&findPortalToken_(ss,candidate)){token=candidate;break;}
+      }
+    }
+    if(!token){
+      const created=createEmployeeLinks_(ss,id,'all',String(portalBaseUrl||''));
+      if(created&&created.ok&&created.links&&created.links.length)token=String(created.links[0].token||'');
+    }
+    if(!token)return;
+    const code=portalNewAccessCode_(ss);
+    const row=[code,token,id,name,'all','TRUE',new Date()];
+    sh.getRange(sh.getLastRow()+1,1,1,7).setValues([row]);
+    rowByEmp.set(id,sh.getLastRow());
+  });
+  SpreadsheetApp.flush();
+  const last=sh.getLastRow();
+  if(last<2)return [];
+  return sh.getRange(2,1,last-1,7).getDisplayValues().filter(r=>r[0]&&r[1])
     .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
+}
+function listEmployeeAccessCodes_(ss){
+  return ensureEmployeeAccessCodes_(ss,'');
 }
 function sharedSigningEnabled_(){
   return String(PropertiesService.getScriptProperties().getProperty('SHARED_SIGNING_ENABLED')||'true').toLowerCase()!=='false';
