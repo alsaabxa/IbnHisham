@@ -400,7 +400,7 @@ function saveEmployeeSignature_(ss,data){
   if(image.length>1500000)return {ok:false,error:'حجم التوقيع كبير؛ امسحي مساحة التوقيع وأعيدي التوقيع بحجم أصغر.'};
   const sh=portalSignaturesSheet_(ss);
   const existing=sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,8).getDisplayValues():[];
-  if(existing.some(r=>String(r[1]||r[0]||'')===token))return {ok:false,error:'تم اعتماد التوقيع مسبقًا. لا يمكن اعتماد توقيع آخر إلا بعد حذف التوقيع الحالي من الإدارة.'};
+  if(existing.some(r=>String(r[1]||r[0]||'')===token||String(r[2]||'')===String(emp.id)))return {ok:false,error:'تم اعتماد توقيع هذه الموظفة مسبقًا. لا يمكن اعتماد توقيع آخر إلا بعد حذف التوقيع الحالي من الإدارة.'};
   const now=new Date().toISOString();
   upsertOne_(ss,PORTAL_SIGNATURES_SHEET_,{id:token,token:token,empId:emp.id,name:emp.name,type:reportType,data:image,at:now,createdAt:now});
   SpreadsheetApp.flush();
