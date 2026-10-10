@@ -189,29 +189,47 @@ function upsertMany_(ss,name,records){
     return input.length;
   }
 
-  // Collapse repeated keys first; last record wins, matching the prior behavior.
+  // Keep the previous last-record-wins behavior for duplicate keys.
   const latestByKey=new Map();
   input.forEach(r=>{const k=String(r[keyField]||'');if(k)latestByKey.set(k,r);});
   if(!latestByKey.size)return 0;
 
-  // Read the table once, apply all updates in memory, and write once.
-  // This avoids one Spreadsheet service call per record during every sync.
+  // Read existing rows once, but write only rows whose values actually changed.
   const lastRow=sh.getLastRow();
   const rows=lastRow>1?sh.getRange(2,1,lastRow-1,headers.length).getValues():[];
   const rowByKey=new Map();
   rows.forEach((row,i)=>{const k=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim();if(k)rowByKey.set(k,i);});
-  const changed=[];
+  const updates=new Map(),newRows=[];
+  const sameValue=(a,b)=>{
+    const av=normalize_(a),bv=normalize_(b);
+    return String(av===null||av===undefined?'':av)===String(bv===null||bv===undefined?'':bv);
+  };
   latestByKey.forEach((record,key)=>{
     const values=headers.map(h=>record[h]===undefined?'':normalize_(record[h]));
     const index=rowByKey.get(key);
     if(index!==undefined){
-      rows[index]=values;
+      const old=rows[index];
+      if(values.some((v,j)=>!sameValue(old[j],v)))updates.set(index,values);
     }else{
-      rows.push(values);
+      newRows.push(values);
     }
-    changed.push(key);
   });
-  if(rows.length)sh.getRange(2,1,rows.length,headers.length).setValues(rows);
+
+  // Batch contiguous changed rows to reduce Spreadsheet service calls.
+  const indices=[...updates.keys()].sort((a,b)=>a-b);
+  let p=0;
+  while(p<indices.length){
+    let q=p+1;
+    while(q<indices.length&&indices[q]===indices[q-1]+1)q++;
+    const block=indices.slice(p,q);
+    sh.getRange(block[0]+2,1,block.length,headers.length).setValues(block.map(i=>updates.get(i)));
+    p=q;
+  }
+  // Append new records in one write.
+  if(newRows.length){
+    const appendAt=Math.max(2,lastRow+1);
+    sh.getRange(appendAt,1,newRows.length,headers.length).setValues(newRows);
+  }
   return latestByKey.size;
 }
 function upsertSignatures_(ss,obj){
