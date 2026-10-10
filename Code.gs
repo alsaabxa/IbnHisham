@@ -171,10 +171,43 @@ function readSettings_(ss){
   return out;
 }
 function upsertMany_(ss,name,records){
-  let n=0;(records||[]).forEach(r=>{if(r&&(r.id||r.key)){upsertOne_(ss,name,r);n++;}});return n;
+  const input=(records||[]).filter(r=>r&&(r.id||r.key));
+  if(!input.length)return 0;
+  const sh=getOrCreate_(ss,name);
+  const preferred={
+    Employees:['id','name','job','createdAt'],
+    Absences:['id','empId','name','job','type','month','from','to','days','ref','reportDate','place','note','created'],
+    Lateness:['id','empId','name','job','date','arrival','start','minutes','reason','note','created'],
+    Signatures:['id','empId','name','type','data','at','createdAt'],
+    Settings:['key','value','updatedAt']
+  }[name]||Object.keys(input[0]);
+  ensureHeaders_(sh,preferred);
+  const headers=getHeaders_(sh),keyField=name==='Settings'?'key':'id',keyCol=headers.indexOf(keyField)+1;
+  if(!headers.length||keyCol<1){
+    input.forEach(r=>upsertOne_(ss,name,r));
+    return input.length;
+  }
+  const last=sh.getLastRow(),rowByKey=new Map();
+  if(last>1){
+    const keys=sh.getRange(2,keyCol,last-1,1).getDisplayValues();
+    keys.forEach((r,i)=>{const k=String(r[0]||'');if(k)rowByKey.set(k,i+2);});
+  }
+  // Collapse duplicate IDs in the same sync; the last record wins, as in the old sequential upsert.
+  const latestByKey=new Map();
+  input.forEach(r=>{const k=String(r[keyField]||'');if(k)latestByKey.set(k,r);});
+  const append=[];
+  latestByKey.forEach((record,key)=>{
+    const values=headers.map(h=>record[h]===undefined?'':normalize_(record[h]));
+    const row=rowByKey.get(key);
+    if(row)sh.getRange(row,1,1,headers.length).setValues([values]);
+    else append.push(values);
+  });
+  if(append.length)sh.getRange(sh.getLastRow()+1,1,append.length,headers.length).setValues(append);
+  return latestByKey.size;
 }
 function upsertSignatures_(ss,obj){
-  let n=0;Object.keys(obj||{}).forEach(id=>{const s=obj[id]||{};upsertOne_(ss,CONFIG.sheets.signatures,{id:id,empId:id,name:s.name||'',type:s.type||'',data:s.data||'',at:s.at||'',createdAt:s.createdAt||s.at||''});n++;});return n;
+  const records=Object.keys(obj||{}).map(id=>{const s=obj[id]||{};return {id:id,empId:id,name:s.name||'',type:s.type||'',data:s.data||'',at:s.at||'',createdAt:s.createdAt||s.at||''};});
+  return upsertMany_(ss,CONFIG.sheets.signatures,records);
 }
 function deleteAllRows_(ss,name){
   const sh=getOrCreate_(ss,name);
