@@ -138,7 +138,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <div class="notice">رابط موحّد للتوقيع: تشاركين الرابط نفسه مع الجميع، وتدخل كل موظفة رمزها الخاص. لا تشاركي جدول الرموز إلا مع الإدارة. لتفعيل إدارة الرموز، أضيفي خاصية المشروع PORTAL_ADMIN_PIN في Apps Script.</div>
 <div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">الرابط الموحّد ورموز الموظفات</h3>
-<div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">عرض الرموز وتعديلها</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><p id="sharedSigningState" class="muted" role="status">يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز.</p>
+<div class="grid" style="margin:10px 0 14px"><div class="field"><label for="sharedAdminPinInput">كلمة مرور الإدارة لرموز الموظفات</label><input id="sharedAdminPinInput" type="text" value="admin1234" autocomplete="off" spellcheck="false"><small class="dhint">تُستخدم تلقائيًا عند إدارة الرموز. تنبيه: ظهور كلمة المرور في هذه الصفحة يجعلها معروفة لأي شخص يستطيع فتح الإعدادات.</small></div></div><div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">عرض الرموز وتعديلها</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><p id="sharedSigningState" class="muted" role="status">يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز.</p>
 <div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div>
 </div><div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">إنشاء رابط توقيع لتقرير محدد</h3>
@@ -719,7 +719,7 @@ function clearSharedSigningCodes(){
  if(b)b.innerHTML='';if(l)l.innerHTML='';try{sessionStorage.removeItem(SHARED_CODES_SESSION_KEY);}catch(e){}if(s)s.textContent='تم إخفاء الرموز من الشاشة لهذه الجلسة فقط؛ ما زالت محفوظة في Google Sheets.';
 }
 
-function sharedAdminPin(){return window.prompt('أدخلي الرقم الإداري لإدارة رموز التوقيع:');}
+function sharedAdminPin(){const field=_g('sharedAdminPinInput');return field?field.value.trim():'admin1234';}
 function renderSharedSigningCodes(codes,sharedUrl){
  const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
  cacheSharedSigningCodes(codes,sharedUrl);
@@ -731,10 +731,10 @@ function renderSharedSigningCodes(codes,sharedUrl){
   row.append(a,cp);linkBox.replaceChildren(row);
  }
  if(!codes||!codes.length){box.textContent='لا توجد رموز لعرضها.';return}
- const table=document.createElement('table');table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرمز القابل للتعديل</th><th>حفظ</th></tr></thead><tbody></tbody>';
+ const table=document.createElement('table');table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرمز القابل للتعديل</th><th>إرسال واتساب</th><th>حفظ</th></tr></thead><tbody></tbody>';
  const tbody=table.querySelector('tbody');
  codes.forEach((item,i)=>{
-  const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),saveTd=document.createElement('td');
+  const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),waTd=document.createElement('td'),saveTd=document.createElement('td');
   n.textContent=String(i+1);name.textContent=String(item.name||'');
   const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
   const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
@@ -742,7 +742,7 @@ function renderSharedSigningCodes(codes,sharedUrl){
    try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;try{const saved=JSON.parse(sessionStorage.getItem(SHARED_CODES_SESSION_KEY)||'null');if(saved&&Array.isArray(saved.codes)){const match=saved.codes.find(x=>String(x.empId)===String(item.empId));if(match)match.code=r.code;sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify(saved));}}catch(e){}btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
    catch(e){alert('تعذر الاتصال بالخدمة');btn.textContent='حفظ الرمز';}finally{btn.disabled=false;}
   };
-  saveTd.appendChild(btn);tr.append(n,name,codeTd,saveTd);tbody.appendChild(tr);
+  saveTd.appendChild(btn);const waBtn=document.createElement('button');waBtn.type='button';waBtn.className='btn primary';waBtn.textContent='إرسال عبر واتساب';waBtn.onclick=()=>{const msg='السلام عليكم '+String(item.name||'')+'، هذا رمزك الخاص للتوقيع الإلكتروني: '+String(inp.value||item.code||'')+'\nرابط التوقيع: '+String(sharedUrl||window.location.origin+window.location.pathname+'?sign=1')+'\nيرجى عدم مشاركة الرمز مع الآخرين.';window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');};waTd.appendChild(waBtn);tr.append(n,name,codeTd,waTd,saveTd);tbody.appendChild(tr);
  });
  box.appendChild(table);
 }
