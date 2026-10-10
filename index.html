@@ -934,10 +934,13 @@ async function submitPortalSignature(){
   const view=document.getElementById('portalSavedSignature');
   if(view){view.innerHTML='<img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+c.toDataURL('image/png')+'">';}
   c.style.display='none';
-  const actionRow=c.nextElementSibling;
-  if(actionRow)actionRow.style.display='none';
+  const signControls=document.getElementById('portalSignControls');
+  if(signControls)signControls.style.display='none';
+  const thankYou=document.getElementById('portalThankYou');
+  if(thankYou)thankYou.style.display='block';
   status.textContent='✓ تم التوقيع بنجاح';
   status.style.cssText='font-size:15px;font-weight:700;color:#17805b;background:#f2faf6;border:1px solid #b7e4cf;border-radius:10px;padding:12px;margin-top:10px';
+  startPortalPrintWindow();
  }catch(e){
   status.textContent='تعذر الاتصال بالخدمة. لم يتم تأكيد حفظ التوقيع.';
   portalSignatureSubmitting=false;controls.forEach(b=>b.disabled=false);
@@ -1017,12 +1020,34 @@ async function initEmployeePortal(){
    section('الإجراءات',actions.length?table(['التاريخ','نوع الإجراء','الإجراء','ملاحظات'],actions.map(x=>[dateCell(x.date),escH(x.type||''),escH(x.text||''),escH(x.note||'')])):empty)+
    '<div style="text-align:center;color:#6b7c8f;font-size:11px;padding:14px">تاريخ التقرير: '+portalDateHtml(new Date())+'</div>' +
    '<style>@media print{@page{size:A4 portrait;margin:7mm}body.portal-print-mode{background:#fff!important;margin:0!important;padding:0!important}body.portal-print-mode #employeePortalRoot{max-width:none!important;width:100%!important;margin:0!important;padding:0!important;background:#fff!important}body.portal-print-mode #employeePortalRoot>*:not(#portalPrintReport){display:none!important}body.portal-print-mode #portalPrintReport{display:block!important;width:100%!important;font:8pt/1.25 Cairo,Arial,sans-serif;color:#000!important}#portalPrintReport .phead{display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:5px;margin-bottom:5px}#portalPrintReport .phead div{display:flex;flex-direction:column;font-size:9pt;line-height:1.4}#portalPrintReport .phead img{height:43px;max-width:65px;object-fit:contain}#portalPrintReport .pmeta{text-align:center;display:flex;flex-direction:column;gap:1px;margin:3px 0}#portalPrintReport .pmeta b:first-child{font-size:10pt}#portalPrintReport h1{text-align:center;font-size:14pt;margin:4px 0 0}#portalPrintReport .psub{text-align:center;font-size:7.5pt;margin:1px 0 5px}#portalPrintReport .pemp{display:flex;justify-content:space-between;gap:8px;border:1px solid #555;padding:4px;margin:4px 0;font-size:8pt}#portalPrintReport h2{font-size:10pt;margin:5px 0 3px;border-bottom:1px solid #555;padding-bottom:2px}#portalPrintReport .ptable{width:100%;table-layout:fixed;border-collapse:collapse;font-size:7pt;direction:rtl}#portalPrintReport .ptable th,#portalPrintReport .ptable td{border:1px solid #444;text-align:center;vertical-align:middle;padding:2px 1px;white-space:normal;overflow-wrap:anywhere;line-height:1.15}#portalPrintReport .ptable th{background:#e9eef2!important;font-weight:800}#portalPrintReport .pdate{display:flex;flex-direction:column;line-height:1.15;white-space:normal}#portalPrintReport .pdate b{font-size:6.6pt}#portalPrintReport .pdate small{font-size:6.3pt}#portalPrintReport .ptotal{font-weight:800;margin:3px 0;font-size:7.5pt}#portalPrintReport .psign{display:flex;justify-content:space-between;gap:15px;margin-top:14px;font-size:8pt}#portalPrintReport .psign div{display:flex;flex-direction:column;gap:7px;min-width:45%}#portalPrintReport .psign span{font-weight:700}#portalPrintReport .ptable th,#portalPrintReport .ptable td{-webkit-print-color-adjust:exact;print-color-adjust:exact}button,#portalSignatureCanvas{display:none!important}#portalSavedSignature{display:block!important}body{background:#fff!important}}@media screen{#portalPrintReport{display:none!important}}</style>' +
-   section('التوقيع الإلكتروني','<p style="font-size:13px;color:#526779">راجعي التقرير أعلاه، ثم وقّعي داخل المساحة واضغطي «اعتماد وإرسال». لا يُعتمد التوقيع إلا بعد تأكيد حفظه في النظام.</p>'+(d.signature?'<div style="padding:10px;background:#f2faf6;border:1px solid #b7e4cf;border-radius:10px;margin-bottom:10px"><b style="color:#17805b">سبق اعتماد هذا التقرير</b><div id="portalSavedSignature" style="margin-top:8px"><img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+escH(d.signature.data||'')+'"></div><small>وقت الاعتماد: '+escH(d.signature.at||'')+'</small></div>':'<div id="portalSavedSignature"></div>')+'<canvas id="portalSignatureCanvas" width="1000" height="260" aria-label="مساحة التوقيع" style="display:block;width:100%;height:190px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;touch-action:none"></canvas><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" onclick="clearPortalSignature()" style="border:1px solid #cbd5e1;background:#fff;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">مسح</button><button type="button" onclick="submitPortalSignature()" style="border:0;background:#1267b2;color:#fff;border-radius:10px;padding:11px 18px;font:700 14px Cairo">اعتماد وإرسال</button><button type="button" onclick="printPortalOriginalReport()" style="border:1px solid #0a8a96;background:#eaf7f7;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">🖨️ طباعة النسخة الأصلية</button><button type="button" onclick="printPortalCompactReport()" style="border:1px solid #cbd5e1;background:#f5f8fa;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">طباعة التقرير / PDF</button></div><p id="portalSignatureStatusText" aria-live="polite" style="font-size:13px;color:#526779;margin-top:10px">'+(d.signature?'تم حفظ التوقيع سابقًا. يمكن تحديثه عند الحاجة.':'بانتظار توقيع الموظفة')+'</p>');
+   section('التوقيع الإلكتروني','<p style="font-size:13px;color:#526779">راجعي التقرير أعلاه، ثم وقّعي داخل المساحة واضغطي «اعتماد وإرسال». لا يُعتمد التوقيع إلا بعد تأكيد حفظه في النظام.</p>'+(d.signature?'<div style="padding:10px;background:#f2faf6;border:1px solid #b7e4cf;border-radius:10px;margin-bottom:10px"><b style="color:#17805b">سبق اعتماد هذا التقرير</b><div id="portalSavedSignature" style="margin-top:8px"><img alt="التوقيع المعتمد" style="max-width:100%;max-height:110px;object-fit:contain" src="'+escH(d.signature.data||'')+'"></div><small>وقت الاعتماد: '+escH(d.signature.at||'')+'</small></div>':'<div id="portalSavedSignature"></div>')+'<canvas id="portalSignatureCanvas" width="1000" height="260" aria-label="مساحة التوقيع" style="display:block;width:100%;height:190px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;touch-action:none"></canvas><div id="portalSignControls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" onclick="clearPortalSignature()" style="border:1px solid #cbd5e1;background:#fff;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">مسح</button><button type="button" onclick="submitPortalSignature()" style="border:0;background:#1267b2;color:#fff;border-radius:10px;padding:11px 18px;font:700 14px Cairo">اعتماد وإرسال</button></div><div id="portalThankYou" role="status" aria-live="polite" style="display:none;margin-top:12px;padding:14px 16px;border:1px solid #b7e4cf;border-radius:12px;background:#f2faf6;color:#176b48;font:700 15px/1.9 Cairo,Arial,sans-serif;text-align:center">شكرًا لكِ على اعتماد التقرير الإلكتروني 🌷<br><span style="font-size:13px;font-weight:400">تم حفظ توقيعك بنجاح. يمكنك طباعة التقرير خلال 60 ثانية من الآن.</span></div><div id="portalPrintControls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button type="button" onclick="printPortalOriginalReport()" style="border:1px solid #0a8a96;background:#eaf7f7;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">🖨️ طباعة النسخة الأصلية</button><button type="button" onclick="printPortalCompactReport()" style="border:1px solid #cbd5e1;background:#f5f8fa;color:#0f2a43;border-radius:10px;padding:11px 18px;font:700 14px Cairo">طباعة التقرير / PDF</button></div><p id="portalPrintWindowStatus" aria-live="polite" style="font-size:12px;color:#526779;margin:6px 0 0"></p><p id="portalSignatureStatusText" aria-live="polite" style="font-size:13px;color:#526779;margin-top:10px">'+(d.signature?'تم حفظ التوقيع سابقًا. يمكن تحديثه عند الحاجة.':'بانتظار توقيع الموظفة')+'</p>');
   setupPortalSignature();
  }catch(err){
   root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>تحققي من نشر Code.gs المحدّث.</p></div>';
  }
  return true;
+}
+
+let portalPrintWindowTimer=null;
+function startPortalPrintWindow(){
+ const controls=document.getElementById('portalPrintControls');
+ const note=document.getElementById('portalPrintWindowStatus');
+ if(!controls)return;
+ controls.style.display='flex';
+ if(portalPrintWindowTimer){clearInterval(portalPrintWindowTimer);portalPrintWindowTimer=null;}
+ let remaining=60;
+ const update=()=>{
+  if(remaining<=0){
+   clearInterval(portalPrintWindowTimer);portalPrintWindowTimer=null;
+   controls.style.display='none';
+   if(note){note.textContent='انتهت مهلة الطباعة. شكرًا لكِ.';note.style.color='#6b7c8f';}
+   return;
+  }
+  if(note)note.textContent='يمكنك طباعة التقرير خلال '+remaining+' ثانية.';
+  remaining--;
+ };
+ update();
+ portalPrintWindowTimer=setInterval(update,1000);
 }
 
 function printPortalCompactReport(){
