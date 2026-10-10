@@ -138,7 +138,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <div class="notice">رابط موحّد للتوقيع: تشاركين الرابط نفسه مع الجميع، وتدخل كل موظفة رمزها الخاص. لا تشاركي جدول الرموز إلا مع الإدارة. لتفعيل إدارة الرموز، أضيفي خاصية المشروع PORTAL_ADMIN_PIN في Apps Script.</div>
 <div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">الرابط الموحّد ورموز الموظفات</h3>
-<div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">عرض الرموز وتعديلها</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div>
+<div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">عرض الرموز وتعديلها</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><p id="sharedSigningState" class="muted" role="status">يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز.</p>
 <div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div>
 </div><div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">إنشاء رابط توقيع لتقرير محدد</h3>
@@ -710,6 +710,18 @@ function renderSharedSigningCodes(codes,sharedUrl){
  });
  box.appendChild(table);
 }
+async function setSharedSigningState(enabled){
+ const status=_g('sharedCodesStatus'),stateBox=_g('sharedSigningState');if(!status)return;
+ const verb=enabled?'تفعيل الرابط الموحّد':'إيقاف الرابط الموحّد مؤقتًا';
+ if(!confirm('هل تريدين '+verb+'؟ لن يتغير الرابط أو رموز الموظفات.'))return;
+ const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ تحديث حالة الرابط...';
+ try{
+  const r=await apiPost('setSharedSigningEnabled',{adminPin:pin,enabled:enabled});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر تحديث حالة الرابط';return;}
+  status.textContent=r.message||'تم تحديث حالة الرابط';
+  if(stateBox)stateBox.textContent=r.enabled?'حالة الرابط: مفعّل. يمكن للموظفات الدخول باستخدام الرموز الحالية.':'حالة الرابط: متوقف مؤقتًا. لن تعمل الرموز حتى إعادة التفعيل.';
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+}
 async function generateSharedSigningCodes(){
  const status=_g('sharedCodesStatus');if(!status)return;
  if(!confirm('سيتم إصدار رموز جديدة لجميع الموظفات، وستتوقف الرموز السابقة عن العمل. هل تتابعين؟'))return;
@@ -883,7 +895,7 @@ async function submitPortalSignature(){
  controls.forEach(b=>b.disabled=true);
  status.textContent='جارٍ إرسال التوقيع وحفظه...';
  try{
-  const r=await apiPost('saveEmployeeSignature',{token:token,reportType:reportType,data:c.toDataURL('image/png')});
+  const r=await apiPost('saveEmployeeSignature',{token:token,reportType:reportType,data:c.toDataURL('image/png'),shared:window.__portalSharedSigning===true});
   if(!r||!r.ok){
    status.textContent=(r&&r.error)||'تعذر حفظ التوقيع. حاولي مرة أخرى.';
    portalSignatureSubmitting=false;controls.forEach(b=>b.disabled=false);return;
@@ -913,7 +925,7 @@ async function initEmployeePortal(){
     const response=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'redeemEmployeeAccessCode',data:{code:code}}),redirect:'follow'});
     const result=await response.json();
     if(!result||!result.ok||!result.token)throw new Error(result&&result.error||'الرمز غير صحيح');
-    location.replace(location.pathname+'?portal='+encodeURIComponent(result.token));
+    location.replace(location.pathname+'?portal='+encodeURIComponent(result.token)+'&shared=1');
    }catch(e){err.textContent=String(e&&e.message||'تعذر التحقق من الرمز');btn.disabled=false;btn.textContent='عرض تقريري';}
   });
   return true;
@@ -924,7 +936,8 @@ async function initEmployeePortal(){
  try{
   const url=(state.settings&&state.settings.apiUrl||'').trim();
   if(!url) throw new Error('رابط الخدمة غير مضبوط');
-  const response=await fetch(url+'?action=employeeReport&token='+encodeURIComponent(token),{cache:'no-store'});
+  window.__portalSharedSigning=params.get('shared')==='1';
+   const response=await fetch(url+'?action=employeeReport&token='+encodeURIComponent(token)+(window.__portalSharedSigning?'&shared=1':''),{cache:'no-store'});
   const result=await response.json();
   if(!result||!result.ok){root.innerHTML='<div style="background:#fff;padding:24px;border-radius:16px"><h1>تعذر فتح التقرير</h1><p>'+escH(result&&result.error||'تعذر الاتصال بالخدمة')+'</p></div>';return true;}
   const e=result.employee||{},d=result.data||{},abs=d.absences||[],lates=d.lates||[],actions=d.actions||[];

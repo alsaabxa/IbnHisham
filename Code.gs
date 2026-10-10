@@ -18,7 +18,10 @@ function doGet(e) {
     if(action==='ping') return json_({ok:true,service:'IbnHisham Attendance API',message:'الاتصال يعمل بنجاح',time:new Date().toISOString()});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     if(action==='all') return json_({ok:true,data:getAllData_(ss)});
-    if(action==='employeeReport') return json_(employeeReport_(ss, String((e.parameter&&e.parameter.token)||'')));
+    if(action==='employeeReport'){
+      if(String((e.parameter&&e.parameter.shared)||'')==='1'&&!sharedSigningEnabled_())return json_({ok:false,error:'تم إيقاف رابط التوقيع الموحّد مؤقتًا من الإدارة. يرجى المحاولة لاحقًا.'});
+      return json_(employeeReport_(ss, String((e.parameter&&e.parameter.token)||'')));
+    }
     if(action==='portalSignatures') return json_({ok:true,data:listPortalSignatures_(ss)});
     if(action==='employees') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.employees)});
     if(action==='absences') return json_({ok:true,data:readSheet_(ss,CONFIG.sheets.absences)});
@@ -55,6 +58,18 @@ function doPost(e){
       const d=body.data||{};
       if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
       return json_(updateEmployeeAccessCode_(ss,d));
+    }
+    if(action==='getSharedSigningStatus'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      return json_({ok:true,enabled:sharedSigningEnabled_()});
+    }
+    if(action==='setSharedSigningEnabled'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      const enabled=String(d.enabled)==='true';
+      PropertiesService.getScriptProperties().setProperty('SHARED_SIGNING_ENABLED',enabled?'true':'false');
+      return json_({ok:true,enabled:enabled,message:enabled?'تم تفعيل الرابط الموحّد':'تم إيقاف الرابط الموحّد مؤقتًا'});
     }
     if(action==='redeemEmployeeAccessCode'){
       const d=body.data||{};
@@ -328,7 +343,11 @@ function listEmployeeAccessCodes_(ss){
   return sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues().filter(r=>r[0]&&r[1])
     .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
 }
+function sharedSigningEnabled_(){
+  return String(PropertiesService.getScriptProperties().getProperty('SHARED_SIGNING_ENABLED')||'true').toLowerCase()!=='false';
+}
 function redeemEmployeeAccessCode_(ss,provided){
+  if(!sharedSigningEnabled_())return {ok:false,error:'تم إيقاف رابط التوقيع الموحّد مؤقتًا من الإدارة. يرجى المحاولة لاحقًا.'};
   const code=String(provided||'').trim().toUpperCase();
   if(!/^[A-HJ-NP-Z2-9]{6,12}$/.test(code))return {ok:false,error:'تحققي من الرمز ثم حاولي مرة أخرى'};
   const sh=portalAccessCodeSheet_(ss);
@@ -370,6 +389,7 @@ function findPortalToken_(ss,token){
   return null;
 }
 function saveEmployeeSignature_(ss,data){
+  if(data.shared===true&&!sharedSigningEnabled_())return {ok:false,error:'تم إيقاف رابط التوقيع الموحّد مؤقتًا. لم يتم حفظ التوقيع.'};
   const token=String(data.token||'');
   const emp=findPortalToken_(ss,token);
   if(!emp)return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. اطلبي رابطًا جديدًا من الإدارة.'};
