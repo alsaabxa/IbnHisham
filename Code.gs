@@ -34,6 +34,28 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
+    if(action==='generateEmployeeAccessCodes'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      const created=createEmployeeLinks_(ss,'','all',String(d.portalBaseUrl||''));
+      if(!created.ok||!created.links||!created.links.length)return json_(created);
+      const sh=portalAccessCodeSheet_(ss),now=new Date();
+      const rows=created.links.map(x=>[portalNewAccessCode_(ss),String(x.token),String(x.id),String(x.name),String(x.reportType||'all'),'TRUE',now]);
+      if(sh.getLastRow()>1)sh.getRange(2,1,sh.getLastRow()-1,7).clearContent();
+      if(rows.length)sh.getRange(2,1,rows.length,7).setValues(rows);
+      SpreadsheetApp.flush();
+      return json_({ok:true,codes:rows.map(r=>({code:r[0],empId:r[2],name:r[3],reportType:r[4]})),sharedUrl:portalLinkBase_(d.portalBaseUrl)+'?sign=1'});
+    }
+    if(action==='listEmployeeAccessCodes'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      return json_({ok:true,codes:listEmployeeAccessCodes_(ss)});
+    }
+    if(action==='updateEmployeeAccessCode'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      return json_(updateEmployeeAccessCode_(ss,d));
+    }
     if(action==='redeemEmployeeAccessCode'){
       const d=body.data||{};
       return json_(redeemEmployeeAccessCode_(ss,d.code));
@@ -261,7 +283,7 @@ function createEmployeeLinks_(ss,employeeId,reportType,portalBaseUrl){
     const token=portalRandomToken_();
     rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now,reportType]);
     const safeBase=portalLinkBase_(portalBaseUrl);
-    links.push({id:String(e.id),name:String(e.name),reportType:reportType,url:safeBase+'?portal='+encodeURIComponent(token)});
+    links.push({id:String(e.id),name:String(e.name),reportType:reportType,token:token,url:safeBase+'?portal='+encodeURIComponent(token)});
   });
   if(rows.length) sh.getRange(2,1,rows.length,6).setValues(rows);
   SpreadsheetApp.flush();
