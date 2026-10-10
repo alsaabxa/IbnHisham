@@ -158,7 +158,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <div class="card">
 <h2>متابعة التوقيعات الإلكترونية</h2>
 <p class="muted">تظهر هنا التوقيعات التي اعتمدتها الموظفات من الرابط الخاص. يمكن طباعة التقرير من صفحة الموظفة بعد اعتماد التوقيع.</p>
-<div class="actions"><button class="btn primary" type="button" onclick="refreshPortalSignatureStatus()">تحديث حالات التوقيع</button><button class="btn gold" type="button" onclick="printPortalSignaturesReport()">🖨️ طباعة تقرير التوقيعات</button></div>
+<div class="actions"><button class="btn primary" type="button" onclick="refreshPortalSignatureStatus()">تحديث حالات التوقيع</button><button class="btn gold" type="button" onclick="printPortalSignaturesReport()">🖨️ طباعة تقرير التوقيعات</button><button class="btn danger" type="button" onclick="deleteAllPortalSignatures()">🗑️ حذف جميع التوقيعات</button></div>
 <div id="portalSignatureStatus" class="table-wrap" style="margin-top:12px"><div class="empty">اضغطي «تحديث حالات التوقيع» لعرض النتائج.</div></div>
 </div></section>
 <section id="record-management" class="section"><div class="card"><h2>إدارة الرصد وحذف السجلات</h2><div class="notice">هذه الصفحة مخصصة لإدارة سجلات الغياب والتأخير. يمكنك البحث، تعديل السجل أو حذفه، وتُحفظ التعديلات في المنصة وGoogle Sheets.</div><div id="recordEditor" class="card" style="display:none;margin-top:14px;background:#f9fbfc"><h2 id="recordEditorTitle">تعديل الرصد</h2><div id="recordEditorFields" class="grid"></div><div class="actions"><button class="btn primary" onclick="saveRecordEdit()">💾 حفظ التعديل</button><button class="btn secondary" onclick="cancelRecordEdit()">إلغاء</button></div></div><div class="grid" style="margin-top:14px"><div class="field"><label>نوع السجل</label><select id="manageType" onchange="renderRecordManagement()"><option value="all">كل السجلات</option><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>بحث بالاسم أو رقم السجل</label><input id="manageSearch" oninput="renderRecordManagement()" placeholder="اكتب الاسم أو الرقم"></div></div><div class="actions"><button class="btn danger" onclick="deleteAllRecords('absence')">حذف جميع سجلات الغياب</button><button class="btn danger" onclick="deleteAllRecords('late')">حذف جميع سجلات التأخير</button></div><div id="manageSummary" class="record-summary"></div><div id="recordManagementTable" class="table-wrap" style="margin-top:12px"></div></div></section>
@@ -849,6 +849,31 @@ async function deletePortalSignature(id){
   toast('تم حذف التوقيع المحدد بنجاح');
   await refreshPortalSignatureStatus();
  }catch(e){toast('تعذر حذف التوقيع؛ تحققي من اتصال Google Sheets');await refreshPortalSignatureStatus();}
+}
+
+
+async function deleteAllPortalSignatures(){
+ const password=prompt('أدخل الرقم السري الإداري لحذف جميع التوقيعات الإلكترونية:');
+ if(password===null)return;
+ if(password!=='1234')return toast('الرقم السري غير صحيح');
+ const count=portalSignatureRows.length;
+ if(!count){
+  const refreshed=await apiGet('portalSignatures');
+  if(refreshed&&refreshed.ok&&Array.isArray(refreshed.data))portalSignatureRows=refreshed.data;
+ }
+ const total=portalSignatureRows.length;
+ if(!total)return toast('لا توجد توقيعات إلكترونية لحذفها');
+ if(!confirm('تحذير: سيتم حذف جميع التوقيعات الإلكترونية ('+total+') نهائيًا من Google Sheets. لا يمكن التراجع. هل تريد المتابعة؟'))return;
+ const box=_g('portalSignatureStatus');if(box)box.innerHTML='<div class="empty">جارٍ حذف جميع التوقيعات...</div>';
+ try{
+  const r=await apiPost('deleteAllPortalSignatures',{password:password});
+  if(!r||!r.ok){toast((r&&r.error)||'تعذر حذف التوقيعات');await refreshPortalSignatureStatus();return;}
+  toast('تم حذف جميع التوقيعات ('+Number(r.count||0)+') بنجاح');
+  await refreshPortalSignatureStatus();
+ }catch(e){
+  toast('تعذر حذف التوقيعات؛ تحققي من اتصال Google Sheets');
+  await refreshPortalSignatureStatus();
+ }
 }
 
 let portalSignatureRows=[];
