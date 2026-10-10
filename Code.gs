@@ -319,7 +319,7 @@ function portalNewAccessCode_(ss){
   const used=new Set(sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,1).getDisplayValues().flat().map(r=>String(r).toUpperCase()):[]);
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code='';
-  do{code='';for(let i=0;i<8;i++)code+=chars.charAt(Math.floor(Math.random()*chars.length));}while(used.has(code));
+  do{code='';for(let i=0;i<10;i++)code+=chars.charAt(Math.floor(Math.random()*chars.length));}while(used.has(code));
   return code;
 }
 function listEmployeeAccessCodes_(ss){
