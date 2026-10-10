@@ -34,6 +34,32 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
+    if(action==='generateEmployeeAccessCodes'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      const created=createEmployeeLinks_(ss,'','all',String(d.portalBaseUrl||''));
+      if(!created.ok||!created.links||!created.links.length)return json_(created);
+      const sh=portalAccessCodeSheet_(ss),now=new Date();
+      const rows=created.links.map(x=>[portalNewAccessCode_(ss),String(x.token),String(x.id),String(x.name),String(x.reportType||'all'),'TRUE',now]);
+      if(sh.getLastRow()>1)sh.getRange(2,1,sh.getLastRow()-1,7).clearContent();
+      if(rows.length)sh.getRange(2,1,rows.length,7).setValues(rows);
+      SpreadsheetApp.flush();
+      return json_({ok:true,codes:rows.map(r=>({code:r[0],empId:r[2],name:r[3],reportType:r[4]})),sharedUrl:portalLinkBase_(d.portalBaseUrl)+'?sign=1'});
+    }
+    if(action==='listEmployeeAccessCodes'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      return json_({ok:true,codes:listEmployeeAccessCodes_(ss)});
+    }
+    if(action==='updateEmployeeAccessCode'){
+      const d=body.data||{};
+      if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
+      return json_(updateEmployeeAccessCode_(ss,d));
+    }
+    if(action==='redeemEmployeeAccessCode'){
+      const d=body.data||{};
+      return json_(redeemEmployeeAccessCode_(ss,d.code));
+    }
     if(action==='createEmployeeLinks'){
       const d=body.data||{};
       return json_(createEmployeeLinks_(ss,String(d.employeeId||''),String(d.reportType||'all'),String(d.portalBaseUrl||'')));
@@ -257,7 +283,7 @@ function createEmployeeLinks_(ss,employeeId,reportType,portalBaseUrl){
     const token=portalRandomToken_();
     rows.push([token,String(e.id),String(e.name||'').trim(),String(e.job||'').trim(),now,reportType]);
     const safeBase=portalLinkBase_(portalBaseUrl);
-    links.push({id:String(e.id),name:String(e.name),reportType:reportType,url:safeBase+'?portal='+encodeURIComponent(token)});
+    links.push({id:String(e.id),name:String(e.name),reportType:reportType,token:token,url:safeBase+'?portal='+encodeURIComponent(token)});
   });
   if(rows.length) sh.getRange(2,1,rows.length,6).setValues(rows);
   SpreadsheetApp.flush();
@@ -273,6 +299,64 @@ function portalLinkBase_(candidate){
     if(!allowed||u.protocol!=='https:')return fallback;
     return u.origin+u.pathname.replace(/[^/]*$/,'');
   }catch(e){return fallback;}
+}
+
+
+const PORTAL_ACCESS_CODES_SHEET_='EmployeePortalAccessCodes';
+function portalAdminAuthorized_(provided){
+  const expected=String(PropertiesService.getScriptProperties().getProperty('PORTAL_ADMIN_PIN')||'');
+  return !!expected && String(provided||'')===expected;
+}
+function portalAccessCodeSheet_(ss){
+  const sh=getOrCreate_(ss,PORTAL_ACCESS_CODES_SHEET_);
+  const headers=['code','token','empId','name','reportType','active','updatedAt'];
+  if(sh.getLastRow()===0) sh.getRange(1,1,1,headers.length).setValues([headers]);
+  else sh.getRange(1,1,1,headers.length).setValues([headers]);
+  return sh;
+}
+function portalNewAccessCode_(ss){
+  const sh=portalAccessCodeSheet_(ss);
+  const used=new Set(sh.getLastRow()>1?sh.getRange(2,1,sh.getLastRow()-1,1).getDisplayValues().flat().map(r=>String(r).toUpperCase()):[]);
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code='';
+  do{code='';for(let i=0;i<10;i++)code+=chars.charAt(Math.floor(Math.random()*chars.length));}while(used.has(code));
+  return code;
+}
+function listEmployeeAccessCodes_(ss){
+  const sh=portalAccessCodeSheet_(ss);
+  if(sh.getLastRow()<2)return [];
+  return sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues().filter(r=>r[0]&&r[1])
+    .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
+}
+function redeemEmployeeAccessCode_(ss,provided){
+  const code=String(provided||'').trim().toUpperCase();
+  if(!/^[A-HJ-NP-Z2-9]{6,12}$/.test(code))return {ok:false,error:'تحققي من الرمز ثم حاولي مرة أخرى'};
+  const sh=portalAccessCodeSheet_(ss);
+  if(sh.getLastRow()<2)return {ok:false,error:'لم يتم تفعيل رموز الدخول بعد'};
+  const values=sh.getRange(2,1,sh.getLastRow()-1,7).getDisplayValues();
+  for(let i=0;i<values.length;i++){
+    const r=values[i];
+    if(String(r[0]).toUpperCase()===code && String(r[5]).toUpperCase()!=='FALSE' && r[1]){
+      if(!findPortalToken_(ss,String(r[1])))return {ok:false,error:'الرمز غير صالح حاليًا. تواصلي مع الإدارة.'};
+      return {ok:true,token:String(r[1])};
+    }
+  }
+  return {ok:false,error:'الرمز غير صحيح أو تم تغييره. تواصلي مع الإدارة.'};
+}
+function updateEmployeeAccessCode_(ss,data){
+  const empId=String(data.empId||'').trim(),code=String(data.code||'').trim().toUpperCase();
+  if(!empId)return {ok:false,error:'معرّف الموظفة غير محدد'};
+  if(!/^[A-HJ-NP-Z2-9]{6,12}$/.test(code))return {ok:false,error:'استخدمي رمزًا من 6 إلى 12 حرفًا/رقمًا دون مسافات'};
+  const sh=portalAccessCodeSheet_(ss),last=sh.getLastRow();
+  if(last<2)return {ok:false,error:'لا توجد رموز. أنشئي الرموز أولاً.'};
+  const values=sh.getRange(2,1,last-1,7).getDisplayValues();let rowIndex=-1;
+  for(let i=0;i<values.length;i++){
+    if(String(values[i][2])===empId)rowIndex=i+2;
+    else if(String(values[i][0]).toUpperCase()===code)return {ok:false,error:'هذا الرمز مستخدم لموظفة أخرى'};
+  }
+  if(rowIndex<0)return {ok:false,error:'لم يتم العثور على رمز لهذه الموظفة'};
+  sh.getRange(rowIndex,1).setValue(code);sh.getRange(rowIndex,7).setValue(new Date());SpreadsheetApp.flush();
+  return {ok:true,code:code,message:'تم تعديل الرمز'};
 }
 
 function findPortalToken_(ss,token){

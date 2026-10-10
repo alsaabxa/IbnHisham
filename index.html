@@ -135,7 +135,12 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <section id="employees" class="section"><div class="card"><h2>بطاقة الموظفة — تعديل البيانات</h2><div class="grid"><div class="field"><label>اختيار الموظفة</label><select id="editEmpCard" onchange="loadEmpCard()"></select></div><div class="field"><label>اسم الموظفة</label><input id="editEmpName"></div><div class="field"><label>المسمى الوظيفي</label><select id="editEmpJob"></select></div></div><div class="actions"><button class="btn primary" onclick="saveEmpCard()">💾 حفظ وتفعيل التعديل</button></div><div class="mini" style="margin-top:8px">يُحفظ التعديل محليًا ويُزامن مع Google Sheets، ولا يعود الاسم القديم بعد تحديث الصفحة.</div></div><div class="card"><h2>إدارة الموظفات</h2><div class="grid"><div class="field"><label>اسم الموظفة</label><input id="empName"></div><div class="field"><label>المسمى الوظيفي</label><select id="empJob"></select></div></div><div class="actions"><button class="btn primary" onclick="addEmployee()">إضافة موظفة</button></div><div class="card" style="margin-top:18px;background:#f9fbfc"><h2>إضافة أسماء دفعة واحدة</h2><div class="field"><label>اسم في كل سطر</label><textarea id="bulkNames" rows="6"></textarea></div><div class="field" style="margin-top:10px"><label>المسمى الوظيفي للجميع</label><select id="bulkJob"></select></div><div class="actions"><button class="btn secondary" onclick="bulkAdd()">إضافة الأسماء</button></div></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>م</th><th>الاسم</th><th>المسمى</th><th>إجراء</th></tr></thead><tbody id="empTable"></tbody></table></div></div></section>
 <section id="reports" class="section"><div class="card no-print"><h2>التقارير والطباعة</h2><div class="grid"><div class="field"><label>الموظفة</label><select id="repEmp"></select></div><div class="field"><label>نوع التقرير</label><select id="repType" onchange="updRepHint()"><option value="A">A — النموذج الرسمي</option><option value="B">B — التقرير التفصيلي</option></select></div><div class="field"><label>القسم</label><select id="repSection"><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>الفترة</label><select id="repPeriod" onchange="setDefaultReportDates()"><option value="week">أسبوعي</option><option value="month" selected>شهري</option><option value="year">سنوي</option></select></div><div class="field"><label>من تاريخ (هجري)</label><div class="hp" data-id="repDateFrom"></div></div><div class="field"><label>إلى تاريخ (هجري)</label><div class="hp" data-id="repDateTo"></div></div></div><div id="repHintA" class="mini" style="margin-top:10px">النموذج A سنوي: يعرض 12 شهرًا متحركًا بدءًا من شهر «من تاريخ»، وينتهي بالشهر نفسه من السنة التالية.</div><div class="actions"><button class="btn primary" onclick="renderReport()">عرض التقرير</button><button class="btn gold" onclick="printReport()">🖨️ طباعة PDF</button><label class="chk"><input type="checkbox" id="onePagePrint" checked> ضغط التقرير في صفحة واحدة لكل موظفة</label></div></div><div id="report" class="report-box"><div class="empty">اختر الموظفة ونوع التقرير والفترة ثم اضغط «عرض التقرير».</div></div></section>
 <section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label>بداية الدوام الشتوي</label><input id="settingStart" type="time"></div><div class="field"><label>بداية الدوام الصيفي</label><input id="settingStartSummer" type="time"></div><div class="field"><label>اعتماد التوقيت في احتساب التأخير</label><select id="seasonMode"><option value="auto">تلقائي حسب أشهر الدوام الصيفي</option><option value="winter">شتوي دائمًا</option><option value="summer">صيفي دائمًا</option></select></div><div></div><div class="field"><label>الدوام الصيفي من شهر (هجري)</label><select id="summerFrom"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>الدوام الصيفي إلى شهر (هجري)</label><select id="summerTo"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
-<div class="notice">إنشاء روابط خاصة لعرض تقارير الموظفة فقط، مع إمكانية اعتماد التقرير بالتوقيع الإلكتروني. لا تشاركي رابط الموظفة مع غيرها. عند إنشاء رابط جديد يُستبدل الرابط السابق لنفس الموظفة ونوع التقرير فقط.</div><div class="card" style="margin-top:14px;background:#f8fbfc">
+<div class="notice">رابط موحّد للتوقيع: تشاركين الرابط نفسه مع الجميع، وتدخل كل موظفة رمزها الخاص. لا تشاركي جدول الرموز إلا مع الإدارة. لتفعيل إدارة الرموز، أضيفي خاصية المشروع PORTAL_ADMIN_PIN في Apps Script.</div>
+<div class="card" style="margin-top:14px;background:#f8fbfc">
+<h3 style="margin:0 0 12px;color:var(--navy)">الرابط الموحّد ورموز الموظفات</h3>
+<div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">عرض الرموز وتعديلها</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div>
+<div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div>
+</div><div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">إنشاء رابط توقيع لتقرير محدد</h3>
 <div class="grid">
 <div class="field"><label for="portalEmp">الموظفة</label><select id="portalEmp"><option value="">اختر الموظفة</option></select></div>
@@ -146,7 +151,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 </div>
 <div class="actions"><button class="btn primary" type="button" onclick="createEmployeePortalLinks()">إنشاء روابط الموظفات</button><button class="btn secondary" type="button" onclick="clearPortalLinks()">إخفاء الروابط من الشاشة</button><span id="portalLinksStatus" class="muted" aria-live="polite"></span></div>
 <div id="portalLinksResult" class="table-wrap" style="margin-top:12px"></div>
-<p class="muted">لا يتطلب إنشاء الروابط مفتاحًا إداريًا. احتفظي بالروابط في مكان آمن؛ من يملك الرابط يستطيع فتح التقرير المرتبط به.</p>
+<p class="muted">إدارة رموز الدخول تتطلب الرقم الإداري المحفوظ في خصائص مشروع Apps Script باسم PORTAL_ADMIN_PIN. رمز كل موظفة يفتح تقريرها فقط. لا تشاركي الرموز إلا مع الموظفات المعنيات.</p>
 </div>
 <div class="card"><h2>الوظائف المعتمدة</h2><div class="muted">مديرة، وكيلة تعليمية، وكيلة شؤون طلاب / ات، موجهة طلابية، إدارية، معلمة، مستخدمة / مستخدم</div></div></section>
 <section id="sign" class="section">
@@ -675,6 +680,52 @@ const total=sec==='absence'?abs.reduce((a,x)=>a+(Number(x.days)||0),0):late.redu
 _g('report').innerHTML=repHead()+'<div class="report-head"><h2>'+title+' — A</h2><div class="muted">'+(emp?emp.name:'جميع الموظفات')+'</div><div class="report-period">'+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div></div><div class="table-wrap"><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div><div style="margin-top:16px;font-size:12px">إجمالي السجلات: '+(sec==='absence'?abs.length:late.length)+' — إجمالي الأيام/الدقائق: '+total+'</div>'+repFoot(emp)}
 
 
+function clearSharedSigningCodes(){
+ const b=_g('sharedCodesResult'),l=_g('sharedSignLink'),s=_g('sharedCodesStatus');
+ if(b)b.innerHTML='';if(l)l.innerHTML='';if(s)s.textContent='تم إخفاء الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';
+}
+function sharedAdminPin(){return window.prompt('أدخلي الرقم الإداري لإدارة رموز التوقيع:');}
+function renderSharedSigningCodes(codes,sharedUrl){
+ const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
+ const linkBox=_g('sharedSignLink');
+ if(sharedUrl&&linkBox){
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff';
+  const a=document.createElement('a');a.href=sharedUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent='فتح رابط التوقيع الموحّد';
+  const cp=document.createElement('button');cp.type='button';cp.className='btn secondary';cp.textContent='نسخ الرابط';cp.onclick=async()=>{try{await navigator.clipboard.writeText(sharedUrl);cp.textContent='تم النسخ'}catch(e){window.prompt('انسخي الرابط يدويًا:',sharedUrl)}};
+  row.append(a,cp);linkBox.replaceChildren(row);
+ }
+ if(!codes||!codes.length){box.textContent='لا توجد رموز لعرضها.';return}
+ const table=document.createElement('table');table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرمز القابل للتعديل</th><th>حفظ</th></tr></thead><tbody></tbody>';
+ const tbody=table.querySelector('tbody');
+ codes.forEach((item,i)=>{
+  const tr=document.createElement('tr'),n=document.createElement('td'),name=document.createElement('td'),codeTd=document.createElement('td'),saveTd=document.createElement('td');
+  n.textContent=String(i+1);name.textContent=String(item.name||'');
+  const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
+  const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
+  btn.onclick=async()=>{const pin=sharedAdminPin();if(pin===null)return;btn.disabled=true;btn.textContent='جارٍ الحفظ...';
+   try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
+   catch(e){alert('تعذر الاتصال بالخدمة');btn.textContent='حفظ الرمز';}finally{btn.disabled=false;}
+  };
+  saveTd.appendChild(btn);tr.append(n,name,codeTd,saveTd);tbody.appendChild(tr);
+ });
+ box.appendChild(table);
+}
+async function generateSharedSigningCodes(){
+ const status=_g('sharedCodesStatus');if(!status)return;
+ if(!confirm('سيتم إصدار رموز جديدة لجميع الموظفات، وستتوقف الرموز السابقة عن العمل. هل تتابعين؟'))return;
+ const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ إنشاء الرموز...';
+ try{const r=await apiPost('generateEmployeeAccessCodes',{adminPin:pin,portalBaseUrl:window.location.origin+window.location.pathname});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر إنشاء الرموز';return;}
+  renderSharedSigningCodes(r.codes||[],r.sharedUrl);status.textContent='تم إصدار '+(r.codes||[]).length+' رمزًا. احتفظي بالجدول في مكان آمن.';
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+}
+async function loadSharedSigningCodes(){
+ const status=_g('sharedCodesStatus');if(!status)return;const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ تحميل الرموز...';
+ try{const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
+  if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر تحميل الرموز';return;}
+  renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');status.textContent='يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
+ }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
+}
 function clearPortalLinks(){
   const box=document.getElementById('portalLinksResult');
   const status=document.getElementById('portalLinksStatus');
@@ -851,7 +902,22 @@ async function submitPortalSignature(){
 }
 
 async function initEmployeePortal(){
- const token=new URLSearchParams(location.search).get('portal');
+ const params=new URLSearchParams(location.search),token=params.get('portal');
+ if(params.get('sign')==='1'&&!token){
+  document.body.innerHTML='<main dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:520px;margin:8vh auto;padding:22px;color:#172b3a;background:#f5f8fa"><section style="background:#fff;border:1px solid #dce5eb;border-radius:18px;padding:24px;box-shadow:0 8px 28px #0f2a4310"><h1 style="margin:0 0 8px;color:#0f2a43;font-size:23px">التوقيع الإلكتروني للموظفات</h1><p style="color:#526779">أدخلي رمزك الخاص لعرض تقريرك الرسمي فقط.</p><form id="sharedSignCodeForm"><label for="sharedSignCode" style="display:block;margin:14px 0 6px;font-weight:700">رمز الموظفة</label><input id="sharedSignCode" required autocomplete="one-time-code" maxlength="12" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #cbd7df;border-radius:10px;font-size:18px;text-transform:uppercase" placeholder="أدخلي الرمز هنا"><button id="sharedSignSubmit" type="submit" style="width:100%;margin-top:14px;border:0;border-radius:10px;padding:13px;background:#0f2a43;color:#fff;font-weight:700;font-size:16px;cursor:pointer">عرض تقريري</button><p id="sharedSignError" role="status" style="color:#b42318;margin-bottom:0"></p></form><p style="font-size:12px;color:#6b7c8f;margin-top:16px">إذا لم يعمل الرمز، تواصلي مع الإدارة لتأكيده أو تعديله.</p></section></main>';
+  document.getElementById('sharedSignCodeForm').addEventListener('submit',async ev=>{
+   ev.preventDefault();const btn=document.getElementById('sharedSignSubmit'),err=document.getElementById('sharedSignError');
+   const code=document.getElementById('sharedSignCode').value.trim().toUpperCase();btn.disabled=true;btn.textContent='جارٍ التحقق...';err.textContent='';
+   try{
+    const api=(state.settings&&state.settings.apiUrl||'').trim();if(!api)throw new Error('رابط الخدمة غير مضبوط في المنصة');
+    const response=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'redeemEmployeeAccessCode',data:{code:code}}),redirect:'follow'});
+    const result=await response.json();
+    if(!result||!result.ok||!result.token)throw new Error(result&&result.error||'الرمز غير صحيح');
+    location.replace(location.pathname+'?portal='+encodeURIComponent(result.token));
+   }catch(e){err.textContent=String(e&&e.message||'تعذر التحقق من الرمز');btn.disabled=false;btn.textContent='عرض تقريري';}
+  });
+  return true;
+ }
  if(!token)return false;
  document.body.innerHTML='<main id="employeePortalRoot" dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:1180px;margin:0 auto;padding:18px;color:#172b3a;background:#f5f8fa"><div style="background:#0f2a43;color:#fff;border-radius:16px;padding:18px 20px;margin-bottom:16px"><h1 style="margin:0;font-size:22px">التقرير الخاص بالموظفة</h1><p style="margin:5px 0 0;opacity:.85">منصة ابن هشام للطفولة المبكرة</p></div><p>جارٍ تحميل التقرير...</p></main>';
  const root=document.getElementById('employeePortalRoot');
@@ -915,7 +981,7 @@ function printPortalOriginalReport(){
 }
 
 
-const portalMode=new URLSearchParams(location.search).has('portal');
+const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.has('portal')||portalParams.get('sign')==='1';
 if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();}
 
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingStartSummer','seasonMode','summerFrom','summerTo','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
