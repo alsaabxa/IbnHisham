@@ -737,6 +737,21 @@ async function createSelectedEmployeePortalLink(){
   row.append(label,link,copy);box.appendChild(row);status.textContent='تم إنشاء الرابط بنجاح. إنشاء رابط جديد يلغي الروابط السابقة.';
  }catch(e){status.textContent='تعذر إنشاء الرابط: '+String(e&&e.message||e)}
 }
+async function deletePortalSignature(id){
+ if(!id)return toast('تعذر تحديد التوقيع المطلوب');
+ const password=prompt('أدخل الرقم السري لحذف التوقيع المحدد:');
+ if(password===null)return;
+ if(password!=='1234')return toast('الرقم السري غير صحيح');
+ if(!confirm('هل تريد حذف توقيع هذه الموظفة لهذا التقرير نهائيًا من Google Sheets؟'))return;
+ const box=_g('portalSignatureStatus');if(box)box.innerHTML='<div class="empty">جارٍ حذف التوقيع...</div>';
+ try{
+  const r=await apiPost('deletePortalSignature',{id:id,password:password});
+  if(!r||!r.ok){toast((r&&r.error)||'تعذر حذف التوقيع');await refreshPortalSignatureStatus();return;}
+  toast('تم حذف التوقيع المحدد بنجاح');
+  await refreshPortalSignatureStatus();
+ }catch(e){toast('تعذر حذف التوقيع؛ تحققي من اتصال Google Sheets');await refreshPortalSignatureStatus();}
+}
+
 async function refreshPortalSignatureStatus(){
  const box=_g('portalSignatureStatus');if(!box)return;
  box.innerHTML='<div class="empty">جارٍ تحميل حالات التوقيع...</div>';
@@ -745,7 +760,7 @@ async function refreshPortalSignatureStatus(){
   if(!r||!r.ok){box.innerHTML='<div class="empty">تعذر تحميل الحالات. تحققي من نشر Code.gs المحدّث.</div>';return}
   const rows=Array.isArray(r.data)?r.data:[];
   if(!rows.length){box.innerHTML='<div class="empty">لا توجد توقيعات إلكترونية حتى الآن.</div>';return}
-  box.innerHTML='<table><thead><tr><th>م</th><th>الموظفة</th><th>نوع التقرير</th><th>حالة التوقيع</th><th>تاريخ ووقت الاعتماد</th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td><span class="pill">تم التوقيع</span></td><td>'+escH(x.at||'')+'</td></tr>').join('')+'</tbody></table>';
+  box.innerHTML='<table><thead><tr><th>م</th><th>الموظفة</th><th>نوع التقرير</th><th>حالة التوقيع</th><th>تاريخ ووقت الاعتماد</th><th>إجراء</th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td><span class="pill">تم التوقيع</span></td><td>'+escH(x.at||'')+'</td><td><button class="btn danger" type="button" onclick="deletePortalSignature(\''+escH(x.id||'')+'\')">حذف التوقيع</button></td></tr>').join('')+'</tbody></table>';
  }catch(e){box.innerHTML='<div class="empty">تعذر تحميل حالات التوقيع.</div>'}
 }
 
