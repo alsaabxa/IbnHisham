@@ -34,6 +34,10 @@ function doPost(e){
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
+    if(action==='redeemEmployeeAccessCode'){
+      const d=body.data||{};
+      return json_(redeemEmployeeAccessCode_(ss,d.code));
+    }
     if(action==='createEmployeeLinks'){
       const d=body.data||{};
       return json_(createEmployeeLinks_(ss,String(d.employeeId||''),String(d.reportType||'all'),String(d.portalBaseUrl||'')));
