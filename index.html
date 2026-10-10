@@ -158,7 +158,7 @@ body.one-page-print .xt tbody tr{height:22px!important}
 <div class="card">
 <h2>متابعة التوقيعات الإلكترونية</h2>
 <p class="muted">تظهر هنا التوقيعات التي اعتمدتها الموظفات من الرابط الخاص. يمكن طباعة التقرير من صفحة الموظفة بعد اعتماد التوقيع.</p>
-<div class="actions"><button class="btn primary" type="button" onclick="refreshPortalSignatureStatus()">تحديث حالات التوقيع</button></div>
+<div class="actions"><button class="btn primary" type="button" onclick="refreshPortalSignatureStatus()">تحديث حالات التوقيع</button><button class="btn gold" type="button" onclick="printPortalSignaturesReport()">🖨️ طباعة تقرير التوقيعات</button></div>
 <div id="portalSignatureStatus" class="table-wrap" style="margin-top:12px"><div class="empty">اضغطي «تحديث حالات التوقيع» لعرض النتائج.</div></div>
 </div></section>
 <section id="record-management" class="section"><div class="card"><h2>إدارة الرصد وحذف السجلات</h2><div class="notice">هذه الصفحة مخصصة لإدارة سجلات الغياب والتأخير. يمكنك البحث، تعديل السجل أو حذفه، وتُحفظ التعديلات في المنصة وGoogle Sheets.</div><div id="recordEditor" class="card" style="display:none;margin-top:14px;background:#f9fbfc"><h2 id="recordEditorTitle">تعديل الرصد</h2><div id="recordEditorFields" class="grid"></div><div class="actions"><button class="btn primary" onclick="saveRecordEdit()">💾 حفظ التعديل</button><button class="btn secondary" onclick="cancelRecordEdit()">إلغاء</button></div></div><div class="grid" style="margin-top:14px"><div class="field"><label>نوع السجل</label><select id="manageType" onchange="renderRecordManagement()"><option value="all">كل السجلات</option><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>بحث بالاسم أو رقم السجل</label><input id="manageSearch" oninput="renderRecordManagement()" placeholder="اكتب الاسم أو الرقم"></div></div><div class="actions"><button class="btn danger" onclick="deleteAllRecords('absence')">حذف جميع سجلات الغياب</button><button class="btn danger" onclick="deleteAllRecords('late')">حذف جميع سجلات التأخير</button></div><div id="manageSummary" class="record-summary"></div><div id="recordManagementTable" class="table-wrap" style="margin-top:12px"></div></div></section>
@@ -711,13 +711,18 @@ const total=sec==='absence'?abs.reduce((a,x)=>a+(Number(x.days)||0),0):late.redu
 _g('report').innerHTML=repHead()+'<div class="report-head"><h2>'+title+' — A</h2><div class="muted">'+(emp?emp.name:'جميع الموظفات')+'</div><div class="report-period">'+formatPeriod(range.from,range.to,range.label)+'</div><div class="rnow">'+dateBlock(new Date())+'</div></div><div class="table-wrap"><table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table></div><div style="margin-top:16px;font-size:12px">إجمالي السجلات: '+(sec==='absence'?abs.length:late.length)+' — إجمالي الأيام/الدقائق: '+total+'</div>'+repFoot(emp)}
 
 
+const SHARED_CODES_SESSION_KEY='ibnhisham_shared_codes_session_v1';
+function cacheSharedSigningCodes(codes,sharedUrl){try{sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify({codes:codes||[],sharedUrl:sharedUrl||window.location.origin+window.location.pathname+'?sign=1'}));}catch(e){}}
+function restoreSharedSigningCodesFromSession(){try{const saved=sessionStorage.getItem(SHARED_CODES_SESSION_KEY);if(!saved)return;const d=JSON.parse(saved);if(d&&Array.isArray(d.codes)&&d.codes.length){renderSharedSigningCodes(d.codes,d.sharedUrl);const s=_g('sharedCodesStatus');if(s)s.textContent='تم عرض الرموز المحفوظة لهذه الجلسة تلقائيًا.';}}catch(e){}}
 function clearSharedSigningCodes(){
  const b=_g('sharedCodesResult'),l=_g('sharedSignLink'),s=_g('sharedCodesStatus');
- if(b)b.innerHTML='';if(l)l.innerHTML='';if(s)s.textContent='تم إخفاء الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';
+ if(b)b.innerHTML='';if(l)l.innerHTML='';try{sessionStorage.removeItem(SHARED_CODES_SESSION_KEY);}catch(e){}if(s)s.textContent='تم إخفاء الرموز من الشاشة لهذه الجلسة فقط؛ ما زالت محفوظة في Google Sheets.';
 }
+
 function sharedAdminPin(){return window.prompt('أدخلي الرقم الإداري لإدارة رموز التوقيع:');}
 function renderSharedSigningCodes(codes,sharedUrl){
  const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
+ cacheSharedSigningCodes(codes,sharedUrl);
  const linkBox=_g('sharedSignLink');
  if(sharedUrl&&linkBox){
   const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff';
@@ -734,7 +739,7 @@ function renderSharedSigningCodes(codes,sharedUrl){
   const inp=document.createElement('input');inp.type='text';inp.value=String(item.code||'');inp.maxLength=12;inp.autocomplete='off';inp.style.cssText='max-width:180px;text-transform:uppercase';codeTd.appendChild(inp);
   const btn=document.createElement('button');btn.type='button';btn.className='btn secondary';btn.textContent='حفظ الرمز';
   btn.onclick=async()=>{const pin=sharedAdminPin();if(pin===null)return;btn.disabled=true;btn.textContent='جارٍ الحفظ...';
-   try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
+   try{const r=await apiPost('updateEmployeeAccessCode',{adminPin:pin,empId:item.empId,code:inp.value});if(r&&r.ok){item.code=r.code;inp.value=r.code;try{const saved=JSON.parse(sessionStorage.getItem(SHARED_CODES_SESSION_KEY)||'null');if(saved&&Array.isArray(saved.codes)){const match=saved.codes.find(x=>String(x.empId)===String(item.empId));if(match)match.code=r.code;sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify(saved));}}catch(e){}btn.textContent='تم الحفظ';}else{alert((r&&r.error)||'تعذر حفظ الرمز');btn.textContent='حفظ الرمز';}}
    catch(e){alert('تعذر الاتصال بالخدمة');btn.textContent='حفظ الرمز';}finally{btn.disabled=false;}
   };
   saveTd.appendChild(btn);tr.append(n,name,codeTd,saveTd);tbody.appendChild(tr);
@@ -846,15 +851,34 @@ async function deletePortalSignature(id){
  }catch(e){toast('تعذر حذف التوقيع؛ تحققي من اتصال Google Sheets');await refreshPortalSignatureStatus();}
 }
 
+let portalSignatureRows=[];
+function signatureDateParts(value){
+ const d=new Date(value);if(!value||isNaN(d.getTime()))return {hijri:'—',gregorian:'—',time:'—'};
+ const options={day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Riyadh'};
+ let hijri='—',gregorian='—',time='—';
+ try{hijri=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',options).format(d);}catch(e){}
+ try{gregorian=new Intl.DateTimeFormat('ar-SA-u-ca-gregory',options).format(d);}catch(e){}
+ try{time=new Intl.DateTimeFormat('ar-SA',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true,timeZone:'Asia/Riyadh'}).format(d);}catch(e){}
+ return {hijri,gregorian,time};
+}
+function printPortalSignaturesReport(){
+ const rows=portalSignatureRows.slice();
+ if(!rows.length)return toast('حدّثي حالات التوقيع أولًا لعرض تقرير الطباعة');
+ const stamp=signatureDateParts(new Date().toISOString());
+ const body=rows.map((x,i)=>{const d=signatureDateParts(x.at);return '<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td>تم التوقيع</td><td>'+escH(d.hijri)+'</td><td>'+escH(d.gregorian)+'</td><td>'+escH(d.time)+'</td></tr>';}).join('');
+ const title='تقرير التوقيعات الإلكترونية';
+ const w=window.open('','_blank');if(!w)return toast('اسمحي بالنوافذ المنبثقة لطباعة التقرير');
+ w.document.open();w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+'</title><style>body{font-family:Cairo,Arial,sans-serif;color:#172b3a;margin:22px}header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0f2a43;padding-bottom:12px;margin-bottom:14px}h1{font-size:22px;margin:0 0 6px;color:#0f2a43}p{margin:4px 0;font-size:12px}.meta{background:#f5f8fa;padding:10px;border:1px solid #dce5eb;border-radius:8px;margin:12px 0;font-size:12px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #64748b;padding:8px;text-align:center}th{background:#e9eef2;font-weight:800}.foot{margin-top:18px;font-size:11px;color:#526779}@media print{@page{size:A4 portrait;margin:12mm}body{margin:0}button{display:none}}</style></head><body><header><div><h1>'+title+'</h1><p>'+escH(dept())+'</p><p>'+escH(schoolName())+'</p></div><div style="text-align:left;font-size:11px"><b>تاريخ الطباعة</b><p>'+escH(stamp.hijri)+' هـ</p><p>'+escH(stamp.gregorian)+' م</p><p>الوقت: '+escH(stamp.time)+'</p></div></header><div class="meta">عدد التوقيعات المعتمدة: <b>'+rows.length+'</b></div><table><thead><tr><th>م</th><th>اسم الموظفة</th><th>نوع التقرير</th><th>الحالة</th><th>التاريخ الهجري</th><th>التاريخ الميلادي</th><th>الوقت (مكة)</th></tr></thead><tbody>'+body+'</tbody></table><div class="foot">تم إنشاء التقرير من منصة رصد الغياب والتأخير — مدرسة ابن هشام للطفولة المبكرة.</div><script>window.onload=()=>{window.focus();window.print();};<\/script></body></html>');w.document.close();
+}
 async function refreshPortalSignatureStatus(){
  const box=_g('portalSignatureStatus');if(!box)return;
  box.innerHTML='<div class="empty">جارٍ تحميل حالات التوقيع...</div>';
  try{
   const r=await apiGet('portalSignatures');
   if(!r||!r.ok){box.innerHTML='<div class="empty">تعذر تحميل الحالات. تحققي من نشر Code.gs المحدّث.</div>';return}
-  const rows=Array.isArray(r.data)?r.data:[];
+  const rows=Array.isArray(r.data)?r.data:[];portalSignatureRows=rows;
   if(!rows.length){box.innerHTML='<div class="empty">لا توجد توقيعات إلكترونية حتى الآن.</div>';return}
-  box.innerHTML='<table><thead><tr><th>م</th><th>الموظفة</th><th>نوع التقرير</th><th>حالة التوقيع</th><th>تاريخ ووقت الاعتماد</th><th>إجراء</th></tr></thead><tbody>'+rows.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td><span class="pill">تم التوقيع</span></td><td>'+escH(x.at||'')+'</td><td><button class="btn danger" type="button" onclick="deletePortalSignature(\''+escH(x.id||'')+'\')">حذف التوقيع</button></td></tr>').join('')+'</tbody></table>';
+  box.innerHTML='<table><thead><tr><th>م</th><th>الموظفة</th><th>نوع التقرير</th><th>حالة التوقيع</th><th>التاريخ الهجري</th><th>التاريخ الميلادي</th><th>الوقت (مكة)</th><th>إجراء</th></tr></thead><tbody>'+rows.map((x,i)=>{const d=signatureDateParts(x.at);return '<tr><td>'+(i+1)+'</td><td>'+escH(x.name||'')+'</td><td>'+escH(({all:'التقرير الشامل',absence:'تقرير الغياب',late:'تقرير التأخير'}[x.type]||x.type||''))+'</td><td><span class="pill">تم التوقيع</span></td><td>'+escH(d.hijri)+'</td><td>'+escH(d.gregorian)+'</td><td>'+escH(d.time)+'</td><td><button class="btn danger" type="button" onclick="deletePortalSignature(\\''+escH(x.id||'')+'\\')">حذف التوقيع</button></td></tr>';}).join('')+'</tbody></table>';
  }catch(e){box.innerHTML='<div class="empty">تعذر تحميل حالات التوقيع.</div>'}
 }
 
@@ -1059,7 +1083,7 @@ function printPortalOriginalReport(){
 
 
 const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.has('portal')||portalParams.get('sign')==='1';
-if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();}
+if(portalMode){initEmployeePortal();}else{fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();restoreSharedSigningCodesFromSession();}
 
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingStartSummer','seasonMode','summerFrom','summerTo','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
 </script></body></html>
