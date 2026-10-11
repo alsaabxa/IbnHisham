@@ -86,23 +86,30 @@ function doPost(e){
       return json_(deleteAllPortalSignatures_(ss,d));
     }
     if(action==='sync'){
-      const d=body.data||{};
-      const delSuccess=[],delFailed=[];
-      (d.deletes||[]).forEach(x=>{
-        const type=String(x.type||''),id=String(x.id||'');
-        const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
-        if(!sheetName||!id){delFailed.push(id||'');return;}
-        try{if(deleteById_(ss,sheetName,id))delSuccess.push(id);else delFailed.push(id);}catch(err){delFailed.push(id);}
-      });
-      return json_({ok:true,synced:true,result:{
-        employees:upsertMany_(ss,CONFIG.sheets.employees,d.employees||[]),
-        absences:upsertMany_(ss,CONFIG.sheets.absences,d.absences||[]),
-        lateness:upsertMany_(ss,CONFIG.sheets.lateness,d.lates||d.lateness||[]),
-        signatures:upsertSignatures_(ss,d.signatures||{}),
-        settings:upsertSettings_(ss,d.settings||{}),
-        actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[]),
-        deletes:{successIds:delSuccess,failedIds:delFailed}
-      }});
+      const lock=LockService.getScriptLock();
+      if(!lock.tryLock(10000)) return json_({ok:false,error:'المزامنة مشغولة بطلب آخر؛ أعد المحاولة بعد قليل'});
+      try {
+        const d=body.data||{};
+        const delSuccess=[],delFailed=[];
+        (d.deletes||[]).forEach(x=>{
+          const type=String(x.type||''),id=String(x.id||'');
+          const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
+          if(!sheetName||!id){delFailed.push(id||'');return;}
+          try{if(deleteById_(ss,sheetName,id))delSuccess.push(id);else delFailed.push(id);}catch(err){delFailed.push(id);}
+        });
+        const result={
+          employees:upsertMany_(ss,CONFIG.sheets.employees,d.employees||[]),
+          absences:upsertMany_(ss,CONFIG.sheets.absences,d.absences||[]),
+          lateness:upsertMany_(ss,CONFIG.sheets.lateness,d.lates||d.lateness||[]),
+          signatures:upsertSignatures_(ss,d.signatures||{}),
+          settings:upsertSettings_(ss,d.settings||{}),
+          actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[]),
+          deletes:{successIds:delSuccess,failedIds:delFailed}
+        };
+        return json_({ok:true,synced:true,result:result});
+      } finally {
+        lock.releaseLock();
+      }
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
     if(action==='settings'){upsertSettings_(ss,body.data||{});return json_({ok:true,saved:true,action:action});}
@@ -183,7 +190,7 @@ function upsertMany_(ss,name,records){
     Actions:['id','empId','name','job','date','type','text','note','created']
   }[name]||Object.keys(input[0]);
   ensureHeaders_(sh,preferred);
-  const headers=getHeaders_(sh),keyField=name==='Settings'?'key':'id',keyCol=headers.indexOf(keyField);
+  const headers=getHeaders_(sh),keyField=isSettingsSheet_(name)?'key':'id',keyCol=headers.indexOf(keyField);
   if(!headers.length||keyCol<0){
     input.forEach(r=>upsertOne_(ss,name,r));
     return input.length;
@@ -252,7 +259,7 @@ function deleteById_(ss,name,id){
   const wanted=String(id===null||id===undefined?'':id).trim();
   if(!wanted)return false;
   const header=sh.getRange(1,1,1,lastCol).getDisplayValues()[0].map(x=>String(x||'').trim().toLowerCase());
-  const keyField=name==='Settings'?'key':'id';
+  const keyField=isSettingsSheet_(name)?'key':'id';
   let col=header.indexOf(keyField)+1;
   // دعم اختلاف كتابة رأس العمود مثل ID أو id أو وجود مسافات.
   if(col<1)col=header.findIndex(x=>x.replace(/[^a-z]/g,'')===keyField)+1;
@@ -288,12 +295,13 @@ function upsertOne_(ss,name,record){
     Settings:['key','value','updatedAt']
   }[name]||Object.keys(record);
   ensureHeaders_(sh,preferred);
-  const headers=getHeaders_(sh),keyField=name==='Settings'?'key':'id',key=String(record[keyField]||'');
+  const headers=getHeaders_(sh),keyField=isSettingsSheet_(name)?'key':'id',key=String(record[keyField]||'');
   if(!key)return;
   const row=findRow_(sh,keyField,key,headers),values=headers.map(h=>record[h]===undefined?'':normalize_(record[h]));
   if(row)sh.getRange(row,1,1,headers.length).setValues([values]);
   else sh.getRange(sh.getLastRow()+1,1,1,headers.length).setValues([values]);
 }
+function isSettingsSheet_(name){return name==='Settings'||name===CONFIG.sheets.settings;}
 function upsertSettings_(ss,settings){
   Object.keys(settings||{}).forEach(k=>upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:settings[k],updatedAt:new Date().toISOString()}));
   return Object.keys(settings||{}).length;
