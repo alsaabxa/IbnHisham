@@ -288,6 +288,7 @@ function deletedRecordsSheet_(ss){
   return sh;
 }
 function getDeletedRecordIds_(ss,type){
+  type=normalizeDeletedType_(type);
   const sh=ss.getSheetByName(DELETED_RECORDS_SHEET_);
   const ids=new Set();
   if(!sh||sh.getLastRow()<2)return ids;
@@ -296,8 +297,12 @@ function getDeletedRecordIds_(ss,type){
   });
   return ids;
 }
+function normalizeDeletedType_(type){
+  type=String(type||'').trim().toLowerCase();
+  return type==='lateness'?'late':type;
+}
 function markDeletedRecord_(ss,type,id){
-  id=String(id||'').trim();type=String(type||'').trim();
+  id=String(id||'').trim();type=normalizeDeletedType_(type);
   if(!id||!type)return;
   const sh=deletedRecordsSheet_(ss),last=sh.getLastRow();
   if(last>1){
@@ -309,6 +314,7 @@ function markDeletedRecord_(ss,type,id){
   sh.getRange(sh.getLastRow()+1,1,1,3).setValues([[type,id,new Date().toISOString()]]);
 }
 function markAllRecordsDeleted_(ss,type,sheetName){
+  type=normalizeDeletedType_(type);
   const source=ss.getSheetByName(sheetName);
   if(!source||source.getLastRow()<2)return;
   const headers=getHeaders_(source);
