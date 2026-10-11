@@ -309,13 +309,23 @@ function markDeletedRecord_(ss,type,id){
   sh.getRange(sh.getLastRow()+1,1,1,3).setValues([[type,id,new Date().toISOString()]]);
 }
 function markAllRecordsDeleted_(ss,type,sheetName){
-  const sh=ss.getSheetByName(sheetName);
-  if(!sh||sh.getLastRow()<2)return;
-  const headers=getHeaders_(sh);
+  const source=ss.getSheetByName(sheetName);
+  if(!source||source.getLastRow()<2)return;
+  const headers=getHeaders_(source);
   const idCol=headers.findIndex(h=>String(h||'').trim().toLowerCase()==='id');
   if(idCol<0)return;
-  const ids=sh.getRange(2,idCol+1,sh.getLastRow()-1,1).getDisplayValues();
-  ids.forEach(row=>{if(String(row[0]||'').trim())markDeletedRecord_(ss,type,String(row[0]).trim());});
+  const ids=source.getRange(2,idCol+1,source.getLastRow()-1,1).getDisplayValues()
+    .map(row=>String(row[0]||'').trim()).filter(Boolean);
+  if(!ids.length)return;
+  const target=deletedRecordsSheet_(ss),known=new Set();
+  if(target.getLastRow()>1){
+    target.getRange(2,1,target.getLastRow()-1,2).getDisplayValues().forEach(row=>{
+      if(String(row[0]||'')===String(type))known.add(String(row[1]||''));
+    });
+  }
+  const now=new Date().toISOString(),newRows=[];
+  ids.forEach(id=>{if(!known.has(id)){known.add(id);newRows.push([type,id,now]);}});
+  if(newRows.length)target.getRange(target.getLastRow()+1,1,newRows.length,3).setValues(newRows);
 }
 
 function deleteAllRows_(ss,name){
