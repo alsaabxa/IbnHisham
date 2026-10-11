@@ -244,7 +244,8 @@ async function deleteFromSheets(type,id){const url=(state.settings&&state.settin
 async function deleteAllFromSheets(type){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return true;const r=await apiPost('deleteAll',{type:type});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر حذف السجلات من Google Sheets');return false}
 let syncTimer=null;
 let syncBusy=false, syncQueued=false;
-let syncRetryTimer=null;\nlet syncRetryCount=0;
+let syncRetryTimer=null;
+let syncRetryCount=0;
 function queueSheetSync(delay=120){
   clearTimeout(syncTimer);
   syncTimer=setTimeout(()=>{syncToSheets();},delay);
