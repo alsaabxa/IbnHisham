@@ -179,7 +179,18 @@ function readSignatures_(ss){
 }
 function readSettings_(ss){
   const rows=readSheet_(ss,CONFIG.sheets.settings),out={};
-  rows.forEach(r=>{if(r.key)out[r.key]=r.value;});
+  rows.forEach(r=>{
+    if(!r.key)return;
+    let value=r.value;
+    // Settings that contain maps/lists (such as employeeEdits) must survive a Sheets round-trip.
+    if(typeof value==='string'){
+      const trimmed=value.trim();
+      if((trimmed.startsWith('{')&&trimmed.endsWith('}'))||(trimmed.startsWith('[')&&trimmed.endsWith(']'))){
+        try{value=JSON.parse(trimmed);}catch(_){/* Keep legacy plain-text values unchanged. */}
+      }
+    }
+    out[r.key]=value;
+  });
   return out;
 }
 function upsertMany_(ss,name,records){
@@ -308,7 +319,12 @@ function upsertOne_(ss,name,record){
 }
 function isSettingsSheet_(name){return name==='Settings'||name===CONFIG.sheets.settings;}
 function upsertSettings_(ss,settings){
-  Object.keys(settings||{}).forEach(k=>upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:settings[k],updatedAt:new Date().toISOString()}));
+  Object.keys(settings||{}).forEach(k=>{
+    const raw=settings[k];
+    // Store objects/arrays as JSON text; Sheets cannot reliably round-trip JS objects as cell values.
+    const value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
+    upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:value,updatedAt:new Date().toISOString()});
+  });
   return Object.keys(settings||{}).length;
 }
 function findRow_(sh,keyField,key,headers){
