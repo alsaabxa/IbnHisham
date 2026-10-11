@@ -531,9 +531,20 @@ function saveEmployeeSignature_(ss,data){
   try{
     const sh=portalSignaturesSheet_(ss);
     const last=sh.getLastRow();
-    const existing=last>1?sh.getRange(2,1,last-1,3).getDisplayValues():[];
-    if(existing.some(r=>String(r[1]||r[0]||'')===token||String(r[2]||'')===String(emp.id)))return {ok:false,error:'تم اعتماد توقيع هذه الموظفة مسبقًا. لا يمكن اعتماد توقيع آخر إلا بعد حذف التوقيع الحالي من الإدارة.'};
-    const now=new Date().toISOString();
+    const nowDate=new Date();
+    const today=Utilities.formatDate(nowDate,CONFIG.timezone,'yyyy-MM-dd');
+    const existing=last>1?sh.getRange(2,1,last-1,8).getValues():[];
+    const alreadySignedToday=existing.some(r=>{
+      const sameEmployee=String(r[2]||'')===String(emp.id) || String(r[1]||r[0]||'')===token;
+      if(!sameEmployee)return false;
+      const raw=r[6];
+      if(!raw)return false;
+      const signedAt=raw instanceof Date?raw:new Date(raw);
+      if(isNaN(signedAt.getTime()))return String(raw).slice(0,10)===today;
+      return Utilities.formatDate(signedAt,CONFIG.timezone,'yyyy-MM-dd')===today;
+    });
+    if(alreadySignedToday)return {ok:false,error:'تم اعتماد توقيعك لهذا اليوم بالفعل. يمكنك التوقيع مرة أخرى غدًا.'};
+    const now=nowDate.toISOString();
     const row=[token,token,String(emp.id),String(emp.name||''),reportType,image,now,now];
     sh.getRange(sh.getLastRow()+1,1,1,row.length).setValues([row]);
     SpreadsheetApp.flush();
@@ -608,6 +619,12 @@ function employeeReport_(ss,token){
   const desc=(a,b)=>dateVal(b).localeCompare(dateVal(a));
   absences.sort(desc); lates.sort(desc); actions.sort(desc);
   const signatures=readSheet_(ss,PORTAL_SIGNATURES_SHEET_);
-  const signature=signatures.find(x=>String(x.token||x.id||'')===String(token))||null;
+  const today=Utilities.formatDate(new Date(),CONFIG.timezone,'yyyy-MM-dd');
+  const signature=signatures.find(x=>{
+    if(String(x.token||x.id||'')!==String(token))return false;
+    const raw=x.at||'';
+    const signedAt=raw instanceof Date?raw:new Date(raw);
+    return !isNaN(signedAt.getTime())&&Utilities.formatDate(signedAt,CONFIG.timezone,'yyyy-MM-dd')===today;
+  })||null;
   return {ok:true,reportType:emp.reportType,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions,signature:signature?{data:signature.data,at:signature.at,type:signature.type}:null}};
 }
