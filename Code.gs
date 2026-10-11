@@ -162,7 +162,12 @@ function getAllData_(ss){
 }
 
 function readSheet_(ss,name){
-  const sh=getOrCreate_(ss,name),values=sh.getDataRange().getValues();
+  const sh=getOrCreate_(ss,name);
+  // Read only the used rectangle. getDataRange() can include large formatted-only
+  // areas, making the sync endpoint slow even when the sheet has few real records.
+  const lastRow=sh.getLastRow(),lastCol=sh.getLastColumn();
+  if(lastRow<1||lastCol<1)return[];
+  const values=sh.getRange(1,1,lastRow,lastCol).getValues();
   if(!values.length)return[];
   const headers=values[0].map(String);
   return values.slice(1).filter(r=>r.some(v=>v!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=normalize_(r[i]));return o;});
