@@ -95,7 +95,12 @@ function doPost(e){
           const type=String(x.type||''),id=String(x.id||'');
           const sheetName=type==='employee'?CONFIG.sheets.employees:(type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:'')));
           if(!sheetName||!id){delFailed.push(id||'');return;}
-          try{if(deleteById_(ss,sheetName,id))delSuccess.push(id);else delFailed.push(id);}catch(err){delFailed.push(id);}
+          try{
+            // سجل الحذف مركزيًا قبل حذف الصف حتى لا تعيده أجهزة أخرى من بياناتها القديمة.
+            markDeletedRecord_(ss,type,id);
+            deleteById_(ss,sheetName,id);
+            delSuccess.push(id);
+          }catch(err){delFailed.push(id);}
         });
         const result={
           employees:upsertMany_(ss,CONFIG.sheets.employees,d.employees||[]),
@@ -119,13 +124,15 @@ function doPost(e){
       const id=String(d.id||'');
       const sheetName=type==='employee'?CONFIG.sheets.employees:(type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:'')));
       if(!sheetName||!id) throw new Error('بيانات الحذف غير مكتملة');
+      markDeletedRecord_(ss,type,id);
       const deleted=deleteById_(ss,sheetName,id);
-      return json_({ok:deleted,deleted:deleted,action:'delete',type:type,id:id,error:deleted?'':('السجل غير موجود: '+id)});
+      return json_({ok:true,deleted:deleted,action:'delete',type:type,id:id,error:''});
     }
     if(action==='deleteAll'){
       const d=body.data||{},type=String(d.type||'');
       const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
       if(!sheetName) throw new Error('نوع الحذف غير معروف');
+      markAllRecordsDeleted_(ss,type,sheetName);
       const deleted=deleteAllRows_(ss,sheetName);
       return json_({ok:true,deleted:true,action:'deleteAll',type:type,count:deleted});
     }
@@ -194,7 +201,9 @@ function readSettings_(ss){
   return out;
 }
 function upsertMany_(ss,name,records){
-  const input=(records||[]).filter(r=>r&&(r.id||r.key));
+  const type=deletedTypeForSheet_(name);
+  const deleted=type?getDeletedRecordIds_(ss,type):new Set();
+  const input=(records||[]).filter(r=>r&&(r.id||r.key)&&!(type&&deleted.has(String(r.id||''))));
   if(!input.length)return 0;
   const sh=getOrCreate_(ss,name);
   const preferred={
@@ -259,6 +268,56 @@ function upsertSignatures_(ss,obj){
   const records=Object.keys(obj||{}).map(id=>{const s=obj[id]||{};return {id:id,empId:id,name:s.name||'',type:s.type||'',data:s.data||'',at:s.at||'',createdAt:s.createdAt||s.at||''};});
   return upsertMany_(ss,CONFIG.sheets.signatures,records);
 }
+
+/**
+ * سجل مركزي للحذف يمنع الأجهزة الأخرى من إعادة إنشاء سجل محذوف عبر المزامنة.
+ * لا تُحذف العلامات من هذا السجل؛ معرّفات السجلات الجديدة يجب أن تكون فريدة.
+ */
+const DELETED_RECORDS_SHEET_ = '_DeletedRecords';
+function deletedTypeForSheet_(name){
+  if(name===CONFIG.sheets.employees)return 'employee';
+  if(name===CONFIG.sheets.absences)return 'absence';
+  if(name===CONFIG.sheets.lateness)return 'late';
+  if(name===CONFIG.sheets.actions)return 'action';
+  return '';
+}
+function deletedRecordsSheet_(ss){
+  let sh=ss.getSheetByName(DELETED_RECORDS_SHEET_);
+  if(!sh)sh=ss.insertSheet(DELETED_RECORDS_SHEET_);
+  if(sh.getLastRow()===0)sh.getRange(1,1,1,3).setValues([['type','id','deletedAt']]);
+  return sh;
+}
+function getDeletedRecordIds_(ss,type){
+  const sh=ss.getSheetByName(DELETED_RECORDS_SHEET_);
+  const ids=new Set();
+  if(!sh||sh.getLastRow()<2)return ids;
+  sh.getRange(2,1,sh.getLastRow()-1,2).getDisplayValues().forEach(row=>{
+    if(String(row[0]||'')===String(type))ids.add(String(row[1]||''));
+  });
+  return ids;
+}
+function markDeletedRecord_(ss,type,id){
+  id=String(id||'').trim();type=String(type||'').trim();
+  if(!id||!type)return;
+  const sh=deletedRecordsSheet_(ss),last=sh.getLastRow();
+  if(last>1){
+    const rows=sh.getRange(2,1,last-1,2).getDisplayValues();
+    for(let i=0;i<rows.length;i++){
+      if(String(rows[i][0]||'')===type&&String(rows[i][1]||'')===id)return;
+    }
+  }
+  sh.getRange(sh.getLastRow()+1,1,1,3).setValues([[type,id,new Date().toISOString()]]);
+}
+function markAllRecordsDeleted_(ss,type,sheetName){
+  const sh=ss.getSheetByName(sheetName);
+  if(!sh||sh.getLastRow()<2)return;
+  const headers=getHeaders_(sh);
+  const idCol=headers.findIndex(h=>String(h||'').trim().toLowerCase()==='id');
+  if(idCol<0)return;
+  const ids=sh.getRange(2,idCol+1,sh.getLastRow()-1,1).getDisplayValues();
+  ids.forEach(row=>{if(String(row[0]||'').trim())markDeletedRecord_(ss,type,String(row[0]).trim());});
+}
+
 function deleteAllRows_(ss,name){
   const sh=getOrCreate_(ss,name);
   const last=sh.getLastRow();
@@ -302,6 +361,8 @@ function deleteById_(ss,name,id){
 }
 function upsertOne_(ss,name,record){
   if(!record||(!record.id&&!record.key))return;
+  const deletedType=deletedTypeForSheet_(name);
+  if(deletedType&&getDeletedRecordIds_(ss,deletedType).has(String(record.id||'')))return;
   const sh=getOrCreate_(ss,name);
   const preferred={
     Employees:['id','name','job','createdAt'],
