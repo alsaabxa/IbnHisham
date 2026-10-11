@@ -93,7 +93,7 @@ function doPost(e){
         const delSuccess=[],delFailed=[];
         (d.deletes||[]).forEach(x=>{
           const type=String(x.type||''),id=String(x.id||'');
-          const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
+          const sheetName=type==='employee'?CONFIG.sheets.employees:(type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:'')));
           if(!sheetName||!id){delFailed.push(id||'');return;}
           try{if(deleteById_(ss,sheetName,id))delSuccess.push(id);else delFailed.push(id);}catch(err){delFailed.push(id);}
         });
@@ -117,7 +117,7 @@ function doPost(e){
       const d=body.data||{};
       const type=String(d.type||'');
       const id=String(d.id||'');
-      const sheetName=type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:''));
+      const sheetName=type==='employee'?CONFIG.sheets.employees:(type==='absence'?CONFIG.sheets.absences:(type==='late'||type==='lateness'?CONFIG.sheets.lateness:(type==='action'?CONFIG.sheets.actions:'')));
       if(!sheetName||!id) throw new Error('بيانات الحذف غير مكتملة');
       const deleted=deleteById_(ss,sheetName,id);
       return json_({ok:deleted,deleted:deleted,action:'delete',type:type,id:id,error:deleted?'':('السجل غير موجود: '+id)});
