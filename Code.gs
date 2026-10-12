@@ -519,11 +519,44 @@ function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
     const id=String(emp.id),name=String(emp.name||'').trim();
     const existingRows=rowsByEmp.get(id)||[];
     if(existingRows.length){
-      // Update the display name on every existing row for this employee.
-      // Keep all existing access codes and tokens unchanged.
+      // Preserve each employee's access code, but repair a missing/stale token
+      // for this employee only. This avoids invalidating other employees' links.
+      const repairedTokens={};
       existingRows.forEach(row=>{
         const currentName=String(sh.getRange(row,4).getDisplayValue()||'').trim();
         if(currentName!==name)sh.getRange(row,4).setValue(name);
+        const reportType=String(sh.getRange(row,5).getDisplayValue()||'all').trim()||'all';
+        const currentToken=String(sh.getRange(row,2).getDisplayValue()||'').trim();
+        let tokenInfo=currentToken?findPortalToken_(ss,currentToken):null;
+        const tokenIsValid=tokenInfo&&String(tokenInfo.id)===id&&String(tokenInfo.reportType||'all')===reportType;
+        if(tokenIsValid)return;
+        const key=id+'|'+reportType;
+        let replacementToken=repairedTokens[key]||'';
+        if(!replacementToken){
+          // Reuse a valid token for the same employee/report type if one exists.
+          const freshTokenRows=portalTokenSheet_(ss).getDataRange().getDisplayValues();
+          for(let i=1;i<freshTokenRows.length;i++){
+            const tr=freshTokenRows[i];
+            if(String(tr[1]||'').trim()!==id||String(tr[5]||'all').trim()!==reportType)continue;
+            const candidate=String(tr[0]||'').trim();
+            const candidateInfo=candidate?findPortalToken_(ss,candidate):null;
+            if(candidateInfo&&String(candidateInfo.id)===id&&String(candidateInfo.reportType||'all')===reportType){
+              replacementToken=candidate;break;
+            }
+          }
+          // If no valid token remains, issue a new token for this employee/type only.
+          if(!replacementToken){
+            const created=createEmployeeLinks_(ss,id,reportType,String(portalBaseUrl||''));
+            if(created&&created.ok&&created.links&&created.links.length){
+              replacementToken=String(created.links[0].token||'');
+            }
+          }
+          if(replacementToken)repairedTokens[key]=replacementToken;
+        }
+        if(replacementToken){
+          sh.getRange(row,2).setValue(replacementToken);
+          sh.getRange(row,7).setValue(new Date());
+        }
       });
       return;
     }
