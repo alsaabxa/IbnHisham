@@ -601,7 +601,7 @@ function repFoot(e){return '<div class="rfoot"><div><span>الموظفة</span><
 const _offCache={};
 function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1;m<=12;m++)for(let d=1;d<=30;d++){const g=h2g(yr,m,d);o[m+'-'+d]=!g||g.getDay()===5||g.getDay()===6}return _offCache[yr]=o}
 function escH(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function shortHj(v){const d=parseDateSafe(v);if(!d)return '';const p=hparts(d);return '<span dir="ltr" style="direction:ltr;unicode-bidi:isolate;display:inline-flex;flex-direction:row;align-items:center;gap:0;white-space:nowrap"><span dir="ltr" style="unicode-bidi:isolate">'+ar(p.d)+'</span><span dir="ltr" style="unicode-bidi:isolate">/</span><span dir="ltr" style="unicode-bidi:isolate">'+ar(p.m)+'</span></span>'}
+function shortHj(v){const d=parseDateSafe(v);if(!d)return '';const p=hparts(d);return '<span dir="ltr" style="direction:ltr;unicode-bidi:isolate;display:inline-flex;flex-direction:row;align-items:center;gap:0;white-space:nowrap"><span dir="ltr" style="unicode-bidi:isolate">'+ar(p.m)+'</span><span dir="ltr" style="unicode-bidi:isolate">/</span><span dir="ltr" style="unicode-bidi:isolate">'+ar(p.d)+'</span></span>'}
 function formAAbsence(e,range){
 const yr=hparts(range.from).y,months=reportMonthsInA(range.from,range.to),KEYS={'إجازة مرضية':'sick','إجازة اضطرارية':'urgent','إجازة أمومة':'mat','إجازة رعاية مولود':'care','إجازة أخرى':'other','بدون عذر':'noex'};
 const G=['sick','urgent','mat','care','other','noex'],data={};months.forEach(([y,m])=>{data[y+'-'+m]={};G.forEach(g=>data[y+'-'+m][g]=[])});
