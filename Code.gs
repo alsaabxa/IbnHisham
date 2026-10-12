@@ -396,13 +396,47 @@ function upsertOne_(ss,name,record){
 }
 function isSettingsSheet_(name){return name==='Settings'||name===CONFIG.sheets.settings;}
 function upsertSettings_(ss,settings){
-  Object.keys(settings||{}).forEach(k=>{
+  const entries=Object.keys(settings||{});
+  if(!entries.length)return 0;
+  const sh=getOrCreate_(ss,CONFIG.sheets.settings);
+  const headers=['key','value','updatedAt'];
+  ensureHeaders_(sh,headers);
+  const actualHeaders=getHeaders_(sh);
+  const keyCol=actualHeaders.indexOf('key');
+  if(keyCol<0){
+    entries.forEach(k=>{
+      const raw=settings[k];
+      const value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
+      upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:value,updatedAt:new Date().toISOString()});
+    });
+    return entries.length;
+  }
+  const last=sh.getLastRow();
+  const rows=last>1?sh.getRange(2,1,last-1,actualHeaders.length).getValues():[];
+  const rowByKey=new Map();
+  rows.forEach((row,i)=>{const key=String(row[keyCol]??'').trim();if(key)rowByKey.set(key,i);});
+  const updates=new Map(),appends=[];
+  const now=new Date().toISOString();
+  entries.forEach(k=>{
     const raw=settings[k];
-    // Store objects/arrays as JSON text; Sheets cannot reliably round-trip JS objects as cell values.
     const value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
-    upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:value,updatedAt:new Date().toISOString()});
+    const record={key:k,value:value,updatedAt:now};
+    const values=actualHeaders.map(h=>record[h]===undefined?'':normalize_(record[h]));
+    const idx=rowByKey.get(String(k));
+    if(idx===undefined)appends.push(values);
+    else updates.set(idx,values);
   });
-  return Object.keys(settings||{}).length;
+  const indices=[...updates.keys()].sort((a,b)=>a-b);
+  let p=0;
+  while(p<indices.length){
+    let q=p+1;
+    while(q<indices.length&&indices[q]===indices[q-1]+1)q++;
+    const block=indices.slice(p,q);
+    sh.getRange(block[0]+2,1,block.length,actualHeaders.length).setValues(block.map(i=>updates.get(i)));
+    p=q;
+  }
+  if(appends.length)sh.getRange(sh.getLastRow()+1,1,appends.length,actualHeaders.length).setValues(appends);
+  return entries.length;
 }
 function findRow_(sh,keyField,key,headers){
   const col=headers.indexOf(keyField)+1;if(col<1||sh.getLastRow()<2)return 0;
