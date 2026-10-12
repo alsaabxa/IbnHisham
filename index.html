@@ -155,8 +155,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 <section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label>بداية الدوام الشتوي</label><input id="settingStart" type="time"></div><div class="field"><label>بداية الدوام الصيفي</label><input id="settingStartSummer" type="time"></div><div class="field"><label>اعتماد التوقيت في احتساب التأخير</label><select id="seasonMode"><option value="auto">تلقائي حسب أشهر الدوام الصيفي</option><option value="winter">شتوي دائمًا</option><option value="summer">صيفي دائمًا</option></select></div><div></div><div class="field"><label>الدوام الصيفي من شهر (هجري)</label><select id="summerFrom"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>الدوام الصيفي إلى شهر (هجري)</label><select id="summerTo"><option value="">غير محدد</option><option value="7">رجب</option><option value="8">شعبان</option><option value="9">رمضان</option><option value="10">شوال</option><option value="11">ذو القعدة</option><option value="12">ذو الحجة</option><option value="1">محرم</option><option value="3">ربيع الأول</option><option value="4">ربيع الآخره</option><option value="5">جمادى الأولى</option><option value="6">جمادى الآخرة</option><option value="7">رجب</option></select></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
 <div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">الرابط الموحّد ورموز الموظفات</h3>
-<div class="grid" style="margin:10px 0 14px"><div class="field"><label for="sharedAdminPinInput">كلمة مرور الإدارة لرموز الموظفات</label><input id="sharedAdminPinInput" type="text" value="admin1234" autocomplete="off" spellcheck="false"><small class="dhint">تُستخدم تلقائيًا عند إدارة الرموز. تنبيه: ظهور كلمة المرور في هذه الصفحة يجعلها معروفة لأي شخص يستطيع فتح الإعدادات.</small></div></div><div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes()">تحديث قائمة الرموز</button><button class="btn secondary" type="button" onclick="clearSharedSigningCodes()">إخفاء الرموز</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><p id="sharedSigningState" class="muted" role="status">يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز.</p>
-<div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div>
+<div class="grid" style="margin:10px 0 14px"><div class="field"><label for="sharedAdminPinInput">كلمة مرور الإدارة لرموز الموظفات</label><input id="sharedAdminPinInput" type="text" value="admin1234" autocomplete="off" spellcheck="false"><small class="dhint">تُستخدم تلقائيًا عند إدارة الرموز. تنبيه: ظهور كلمة المرور في هذه الصفحة يجعلها معروفة لأي شخص يستطيع فتح الإعدادات.</small></div></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px"><h3 style="margin:0;color:var(--navy)">قائمة رموز التوقيع الإلكتروني</h3><button id="sharedCodesVisibilityBtn" class="btn secondary" type="button" onclick="toggleSharedSigningCodesVisibility()">إخفاء قائمة الرموز</button></div>
+<div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes(true)">تحديث قائمة الرموز</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><p id="sharedSigningState" class="muted" role="status">يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز.</p>
+<div id="sharedCodesDisplay"><div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div></div>
 </div><div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">إنشاء رابط توقيع لتقرير محدد</h3>
 <div class="grid">
@@ -296,7 +297,7 @@ document.addEventListener('click',e=>{const n=document.getElementById('mainNav')
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 window.addEventListener('resize',()=>{if(window.innerWidth>1024)closeMenu()});
 let sheetRefreshBusy=false;async function refreshFromSheetsFast(){if(sheetRefreshBusy)return;sheetRefreshBusy=true;try{await loadFromSheets()}finally{sheetRefreshBusy=false}}
-function nav(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active','printing'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));document.getElementById('pageTitle').textContent={home:'لوحة المتابعة',absence:'رصد الغياب',late:'رصد التأخير','quick-mark':'الرصد اليومي السريع',employees:'إدارة الموظفات',reports:'التقارير',actions:'الإجراءات والتعليمات',settings:'الإدارة والإعدادات',sign:'توقيع الموظفة','record-management':'إدارة الرصد'}[id];closeMenu();window.scrollTo({top:0,behavior:'smooth'});if(id==='reports')refreshFromSheetsFast();if(id==='sign')refreshPortalSignatureStatus();if(id==='settings')loadSharedSigningCodes()}
+function nav(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active','printing'));document.getElementById(id).classList.add('active');document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.go===id));document.getElementById('pageTitle').textContent={home:'لوحة المتابعة',absence:'رصد الغياب',late:'رصد التأخير','quick-mark':'الرصد اليومي السريع',employees:'إدارة الموظفات',reports:'التقارير',actions:'الإجراءات والتعليمات',settings:'الإدارة والإعدادات',sign:'توقيع الموظفة','record-management':'إدارة الرصد'}[id];closeMenu();window.scrollTo({top:0,behavior:'smooth'});if(id==='reports')refreshFromSheetsFast();if(id==='sign')refreshPortalSignatureStatus();if(id==='settings')showSharedSigningCodesOnSettings()}
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>nav(b.dataset.go));
 function fmtHijri(date){try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'}).format(date)}catch(e){return ''}}
 function showDateInfo(i,o){const d=parseDateSafe(_g(i).value);_g(o).textContent=d?hjStr(d)+' — '+grStr(d)+' — '+WDF.format(d):''}
@@ -750,11 +751,13 @@ _g('report').innerHTML=repHead()+'<div class="report-head"><h2>'+title+' — A</
 
 const SHARED_CODES_SESSION_KEY='ibnhisham_shared_codes_session_v1';
 function cacheSharedSigningCodes(codes,sharedUrl){try{sessionStorage.setItem(SHARED_CODES_SESSION_KEY,JSON.stringify({codes:codes||[],sharedUrl:sharedUrl||window.location.origin+window.location.pathname+'?sign=1'}));}catch(e){}}
-function restoreSharedSigningCodesFromSession(){try{const saved=sessionStorage.getItem(SHARED_CODES_SESSION_KEY);if(!saved)return;const d=JSON.parse(saved);if(d&&Array.isArray(d.codes)&&d.codes.length){renderSharedSigningCodes(d.codes,d.sharedUrl);const s=_g('sharedCodesStatus');if(s)s.textContent='تم عرض الرموز المحفوظة لهذه الجلسة تلقائيًا.';}}catch(e){}}
-function clearSharedSigningCodes(){
- const b=_g('sharedCodesResult'),l=_g('sharedSignLink'),s=_g('sharedCodesStatus');
- if(b)b.innerHTML='';if(l)l.innerHTML='';try{sessionStorage.removeItem(SHARED_CODES_SESSION_KEY);}catch(e){}if(s)s.textContent='تم إخفاء الرموز من الشاشة لهذه الجلسة فقط؛ ما زالت محفوظة في Google Sheets.';
-}
+let sharedCodesHidden=false;
+function readCachedSharedSigningCodes(){try{const saved=sessionStorage.getItem(SHARED_CODES_SESSION_KEY);if(!saved)return null;const d=JSON.parse(saved);return d&&Array.isArray(d.codes)&&d.codes.length?d:null;}catch(e){return null}}
+function restoreSharedSigningCodesFromSession(){const d=readCachedSharedSigningCodes();if(!d)return false;renderSharedSigningCodes(d.codes,d.sharedUrl);const status=_g('sharedCodesStatus');if(status)status.textContent='تم عرض قائمة الرموز المحفوظة تلقائيًا.';return true}
+function setSharedCodesVisibility(hidden){sharedCodesHidden=!!hidden;const box=_g('sharedCodesDisplay'),btn=_g('sharedCodesVisibilityBtn');if(box)box.style.display=sharedCodesHidden?'none':'block';if(btn)btn.textContent=sharedCodesHidden?'إظهار قائمة الرموز':'إخفاء قائمة الرموز';}
+function toggleSharedSigningCodesVisibility(){if(sharedCodesHidden){setSharedCodesVisibility(false);if(!readCachedSharedSigningCodes())loadSharedSigningCodes();else restoreSharedSigningCodesFromSession();}else setSharedCodesVisibility(true)}
+function showSharedSigningCodesOnSettings(){if(sharedCodesHidden)return;if(restoreSharedSigningCodesFromSession())return;loadSharedSigningCodes()}
+function clearSharedSigningCodes(){setSharedCodesVisibility(true);const s=_g('sharedCodesStatus');if(s)s.textContent='تم إخفاء قائمة الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';}
 
 function sharedAdminPin(){const field=_g('sharedAdminPinInput');return field?field.value.trim():'admin1234';}
 function renderSharedSigningCodes(codes,sharedUrl){
@@ -819,27 +822,27 @@ async function generateSharedSigningCodes(){
   renderSharedSigningCodes(r.codes||[],r.sharedUrl);status.textContent='تم إصدار '+(r.codes||[]).length+' رمزًا. احتفظي بالجدول في مكان آمن.';
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
-async function loadSharedSigningCodes(){
+async function loadSharedSigningCodes(forceRefresh=false){
  const status=_g('sharedCodesStatus');if(!status)return;
+ const cached=readCachedSharedSigningCodes();
+ if(!forceRefresh&&cached){renderSharedSigningCodes(cached.codes,cached.sharedUrl);status.textContent='تم عرض قائمة الرموز المحفوظة تلقائيًا.';return;}
  const pin=sharedAdminPin();if(pin===null)return;
- status.textContent='جارٍ مزامنة أسماء الموظفات ثم تحميل الرموز...';
- const box=_g('sharedCodesResult');if(box)box.textContent='يرجى الانتظار...';
+ status.textContent='جارٍ تحميل قائمة الرموز...';
+ const box=_g('sharedCodesResult');if(box)box.textContent='جارٍ تحميل القائمة لأول مرة...';
  try{
-  // Sync current employee names to Google Sheets before reading the code list,
-  // so spelling corrections appear beside existing codes without regenerating them.
-  const synced=await syncBeforeEmployeeCodes();
-  if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ لم يتم تحديث عرض الرموز. تحققي من الاتصال ثم حاولي مرة أخرى.';if(box)box.textContent='';return;}
+  // Load the saved access-code list directly. Do not run a full data sync first,
+  // because that made opening Settings wait on unrelated attendance data.
   const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
   if(!r||!r.ok){
    status.textContent=(r&&r.error)||'تعذر تحميل الرموز';
-   if(box)box.textContent='تعذر تحميل قائمة الرموز. راجعي رسالة الحالة أعلاه ثم حاولي مرة أخرى.';
+   if(box)box.textContent='تعذر تحميل قائمة الرموز. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';
    return;
   }
   renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');
-  status.textContent='تم تحميل '+(r.codes||[]).length+' رمزًا. يمكن تعديل أي رمز ثم الضغط على «حفظ الرمز».';
+  status.textContent='تم تحميل '+(r.codes||[]).length+' رمزًا وحفظ القائمة لهذه الجلسة.';
  }catch(e){
-  status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث ثم أعيدي المحاولة.';
-  if(box)box.textContent='لم تصل استجابة من Google Apps Script.';
+  status.textContent='تعذر الاتصال بالخدمة؛ تحققي من نشر Code.gs المحدّث.';
+  if(box)box.textContent='لم تصل استجابة من Google Apps Script. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';
  }
 }
 function clearPortalLinks(){
