@@ -619,7 +619,14 @@ function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
     .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
 }
 function listEmployeeAccessCodes_(ss){
-  return ensureEmployeeAccessCodes_(ss,'');
+  // عرض الرموز عملية قراءة فقط: لا تفحص جميع الموظفات ولا تصلح/تنشئ الروابط عند فتح الإعدادات.
+  // إنشاء الرموز الناقصة أو إصلاحها يبقى ضمن زر الإنشاء الصريح فقط.
+  const sh=portalAccessCodeSheet_(ss);
+  const last=sh.getLastRow();
+  if(last<2)return [];
+  return sh.getRange(2,1,last-1,7).getDisplayValues()
+    .filter(r=>r[0]&&r[1])
+    .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
 }
 function sharedSigningEnabled_(){
   return String(PropertiesService.getScriptProperties().getProperty('SHARED_SIGNING_ENABLED')||'true').toLowerCase()!=='false';
