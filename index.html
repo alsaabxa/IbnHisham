@@ -832,7 +832,7 @@ async function loadSharedSigningCodes(forceRefresh=false){
  try{
   // Load the saved access-code list directly. Do not run a full data sync first,
   // because that made opening Settings wait on unrelated attendance data.
-  const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin});
+  const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin},45000);
   if(!r||!r.ok){
    status.textContent=(r&&r.error)||'تعذر تحميل الرموز';
    if(box)box.textContent='تعذر تحميل قائمة الرموز. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';
