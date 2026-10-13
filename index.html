@@ -577,7 +577,9 @@ function bSignatures(e){return '<div class="bf-sign"><div><b>الموظفة</b><
 function formB(e,y,m,force,cycleMonths){
  const r=monthRecs(e,y,m);
  /* طابق منطق نموذج A: حدد الشهر المطابق بالسنة أولًا، ثم أقرب سنة لنفس الشهر داخل الدورة؛ ولا تخلط سجلات أشهر الغياب مع التأخير. */
- r.L=latenessForCycleMonth(e,y,m,cycleMonths);
+ const cycleLate=latenessForCycleMonth(e,y,m,cycleMonths);
+ /* لا تُسقط سجلات الشهر المطابقة مباشرة إذا تعذّر إسنادها إلى دورة الأشهر؛ نموذج B يجب أن يعرض الرصد المحفوظ كما يفعله نموذج A. */
+ if(Object.keys(cycleLate).length) r.L=cycleLate;
  const allActions=(Array.isArray(state.actions)?state.actions:[]).filter(a=>sameEmployeeRecord(a,e)).map(a=>({a,d:parseDateSafe(a.date||a.reportDate||a.created)})).filter(v=>v.d);
  const exactActions=allActions.filter(v=>{const p=hparts(v.d);return p.y===y&&p.m===m;});
  const monthActions=exactActions.concat(allActions.filter(v=>hparts(v.d).m===m)).filter((v,i,a)=>a.findIndex(q=>String(q.a.id||q.a.created||q.a.text)===String(v.a.id||v.a.created||v.a.text))===i).map(v=>v.a);
