@@ -619,14 +619,16 @@ function ensureEmployeeAccessCodes_(ss,portalBaseUrl){
     .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
 }
 function listEmployeeAccessCodes_(ss){
-  // عرض الرموز عملية قراءة فقط: لا تفحص جميع الموظفات ولا تصلح/تنشئ الروابط عند فتح الإعدادات.
-  // إنشاء الرموز الناقصة أو إصلاحها يبقى ضمن زر الإنشاء الصريح فقط.
+  // القراءة لا تنشئ رموزًا ولا تغيّرها؛ تعرض الاسم الحالي من ورقة الموظفات حتى تنعكس التصحيحات فورًا.
   const sh=portalAccessCodeSheet_(ss);
   const last=sh.getLastRow();
   if(last<2)return [];
+  const currentNames=new Map(readSheet_(ss,CONFIG.sheets.employees)
+    .filter(e=>e&&e.id)
+    .map(e=>[String(e.id),String(e.name||'').trim()]));
   return sh.getRange(2,1,last-1,7).getDisplayValues()
     .filter(r=>r[0]&&r[1])
-    .map(r=>({code:String(r[0]),empId:String(r[2]),name:String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
+    .map(r=>({code:String(r[0]),empId:String(r[2]),name:currentNames.get(String(r[2]))||String(r[3]),reportType:String(r[4]||'all'),active:String(r[5]).toUpperCase()!=='FALSE'}));
 }
 function sharedSigningEnabled_(){
   return String(PropertiesService.getScriptProperties().getProperty('SHARED_SIGNING_ENABLED')||'true').toLowerCase()!=='false';
