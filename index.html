@@ -847,7 +847,7 @@ async function loadSharedSigningCodes(forceRefresh=false){
  if(!forceRefresh&&cached){renderSharedSigningCodes(cached.codes,cached.sharedUrl);status.textContent='تم عرض قائمة الرموز المحفوظة تلقائيًا.';return;}
  const pin=sharedAdminPin();if(pin===null)return;
  status.textContent='جارٍ تحميل قائمة الرموز...';
- const box=_g('sharedCodesResult');if(box)box.textContent='جارٍ تحميل القائمة لأول مرة...';
+ const box=_g('sharedCodesResult');if(box)box.innerHTML='<span style="color:#c0392b">جارٍ تحميل القائمة لأول مرة...</span>';
  try{
   // Load the saved access-code list directly. Do not run a full data sync first,
   // because that made opening Settings wait on unrelated attendance data.
