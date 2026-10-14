@@ -779,7 +779,9 @@ function showSharedSigningCodesOnSettings(){if(sharedCodesHidden)return;if(resto
 function clearSharedSigningCodes(){setSharedCodesVisibility(true);const s=_g('sharedCodesStatus');if(s)s.textContent='تم إخفاء قائمة الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';}
 
 function sharedAdminPin(){const field=_g('sharedAdminPinInput');return field?field.value.trim():'admin1234';}
+function activeSharedSigningCodes(codes){return (Array.isArray(codes)?codes:[]).filter(item=>item&&item.active!==false)}
 function renderSharedSigningCodes(codes,sharedUrl){
+ codes=activeSharedSigningCodes(codes);
  const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
  cacheSharedSigningCodes(codes,sharedUrl);
  const linkBox=_g('sharedSignLink');
@@ -838,7 +840,7 @@ async function generateSharedSigningCodes(){
  status.textContent='جارٍ إكمال الرموز الناقصة...';
  try{const r=await apiPost('generateEmployeeAccessCodes',{adminPin:pin,portalBaseUrl:window.location.origin+window.location.pathname});
   if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر إنشاء الرموز';return;}
-  renderSharedSigningCodes(r.codes||[],r.sharedUrl);status.textContent='تم إصدار '+(r.codes||[]).length+' رمزًا. احتفظي بالجدول في مكان آمن.';
+  const activeCodes=activeSharedSigningCodes(r.codes||[]);renderSharedSigningCodes(activeCodes,r.sharedUrl);status.textContent='تم إصدار '+activeCodes.length+' رمزًا نشطًا. احتفظي بالجدول في مكان آمن.';
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
 async function loadSharedSigningCodes(forceRefresh=false){
@@ -857,8 +859,8 @@ async function loadSharedSigningCodes(forceRefresh=false){
    if(box)box.textContent='تعذر تحميل قائمة الرموز. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';
    return;
   }
-  renderSharedSigningCodes(r.codes||[],window.location.origin+window.location.pathname+'?sign=1');
-  status.textContent='تم تحميل '+(r.codes||[]).length+' رمزًا وحفظ القائمة لهذه الجلسة.';
+  const activeCodes=activeSharedSigningCodes(r.codes||[]);renderSharedSigningCodes(activeCodes,window.location.origin+window.location.pathname+'?sign=1');
+  status.textContent='تم تحميل '+activeCodes.length+' رمزًا نشطًا وحفظ القائمة لهذه الجلسة.';
  }catch(e){
   status.textContent='تعذر الاتصال بالخدمة؛ تحققي من نشر Code.gs المحدّث.';
   if(box)box.textContent='لم تصل استجابة من Google Apps Script. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';
