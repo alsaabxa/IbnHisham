@@ -99,6 +99,7 @@ function doPost(e){
             // سجل الحذف مركزيًا قبل حذف الصف حتى لا تعيده أجهزة أخرى من بياناتها القديمة.
             markDeletedRecord_(ss,type,id);
             deleteById_(ss,sheetName,id);
+            if(type==='employee')deactivateEmployeeAccessCodes_(ss,id);
             delSuccess.push(id);
           }catch(err){delFailed.push(id);}
         });
@@ -126,6 +127,7 @@ function doPost(e){
       if(!sheetName||!id) throw new Error('بيانات الحذف غير مكتملة');
       markDeletedRecord_(ss,type,id);
       const deleted=deleteById_(ss,sheetName,id);
+      if(type==='employee')deactivateEmployeeAccessCodes_(ss,id);
       return json_({ok:true,deleted:deleted,action:'delete',type:type,id:id,error:''});
     }
     if(action==='deleteAll'){
@@ -519,6 +521,22 @@ const PORTAL_ACCESS_CODES_SHEET_='EmployeePortalAccessCodes';
 function portalAdminAuthorized_(provided){
   const expected=String(PropertiesService.getScriptProperties().getProperty('PORTAL_ADMIN_PIN')||'');
   return !!expected && String(provided||'')===expected;
+}
+function deactivateEmployeeAccessCodes_(ss,empId){
+  empId=String(empId||'').trim();
+  if(!empId)return 0;
+  const sh=portalAccessCodeSheet_(ss),last=sh.getLastRow();
+  if(last<2)return 0;
+  const rows=sh.getRange(2,1,last-1,7).getDisplayValues();
+  let changed=0;
+  rows.forEach((row,i)=>{
+    if(String(row[2]||'').trim()!==empId)return;
+    sh.getRange(i+2,6).setValue(false);
+    sh.getRange(i+2,7).setValue(new Date());
+    changed++;
+  });
+  if(changed)SpreadsheetApp.flush();
+  return changed;
 }
 function portalAccessCodeSheet_(ss){
   const sh=getOrCreate_(ss,PORTAL_ACCESS_CODES_SHEET_);
