@@ -468,7 +468,10 @@ async function saveSettings(){
   const verify=await apiGet('settings');
   if(!verify||!verify.ok||!verify.data)throw new Error('تم إرسال الإعدادات لكن تعذر التحقق من حفظها');
   const remote=verify.data;
-  if(String(remote.start||'07:00')!==String(t.start||'07:00'))throw new Error('لم يتطابق وقت الحضور المحفوظ مع القيمة المطلوبة');
+  const normalizeClock=value=>{const s=String(value==null?'':value).trim();const m=s.match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;};
+  const wantedStart=normalizeClock(t.start||'07:00');
+  const savedStart=normalizeClock(remote.start==null?'07:00':remote.start);
+  if(savedStart!==wantedStart)throw new Error('وقت الحضور المطلوب '+wantedStart+'، لكن القيمة المقروءة من Google Sheets هي '+(savedStart||'فارغة')+'.');
   state.settings=Object.assign({},state.settings,remote,{apiUrl:t.apiUrl,settingsUpdated:Number(remote.settingsUpdated)||t.settingsUpdated});
   localStorage.setItem(KEY,JSON.stringify(state));
   if(st)st.textContent='✓ تم حفظ الإعدادات والتحقق منها';
