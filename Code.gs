@@ -118,7 +118,16 @@ function doPost(e){
       }
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
-    if(action==='settings'){upsertSettings_(ss,body.data||{});return json_({ok:true,saved:true,action:action});}
+    if(action==='settings'){
+      const requested=body.data||{};
+      upsertSettings_(ss,requested);
+      SpreadsheetApp.flush();
+      const persisted=readSettings_(ss);
+      const wanted=String(requested.start==null?'':requested.start).trim();
+      const actual=String(persisted.start==null?'':persisted.start).trim();
+      if(wanted&&actual!==wanted)return json_({ok:false,saved:false,action:action,error:'وقت الحضور لم يُحفظ كما طُلب. المطلوب '+wanted+' والموجود '+(actual||'فارغ')+'.'});
+      return json_({ok:true,saved:true,action:action,data:persisted});
+    }
     if(action==='delete'){
       const d=body.data||{};
       const type=String(d.type||'');
