@@ -888,7 +888,7 @@ async function loadSharedSigningCodes(forceRefresh=false){
  showProgress(true,'جارٍ تجهيز تحميل الرموز...');
  const cached=readCachedSharedSigningCodes();
  if(!forceRefresh&&cached){renderSharedSigningCodes(cached.codes,cached.sharedUrl);status.textContent='تم عرض قائمة الرموز المحفوظة تلقائيًا.';showProgress(false);return;}
- const pin=sharedAdminPin();if(pin===null)return;
+ const pin=sharedAdminPin();if(pin===null){showProgress(false);return;}
  status.textContent='جارٍ تحميل قائمة الرموز...';showProgress(true,'جارٍ الاتصال بـ Google Sheets وتحميل الرموز...');
  const box=_g('sharedCodesResult');if(box)box.innerHTML='<span style="color:#c0392b">جارٍ تحميل القائمة لأول مرة...</span>';
  try{
