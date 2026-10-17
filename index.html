@@ -465,6 +465,7 @@ async function saveSettings(){
   const payload=Object.assign({},t);
   const saved=await apiPost('settings',payload,30000);
   if(!saved||!saved.ok)throw new Error((saved&&saved.error)||'لم يؤكد الخادم حفظ الإعدادات');
+  if(saved.data&&saved.data.start!=null&&normalizeClock(saved.data.start)!==normalizeClock(t.start))throw new Error('خدمة الحفظ أعادت وقتًا مختلفًا. احفظي Code.gs وانشري إصدارًا جديدًا من Apps Script ثم أعيدي المحاولة.');
   const verify=await apiGet('settings');
   if(!verify||!verify.ok||!verify.data)throw new Error('تم إرسال الإعدادات لكن تعذر التحقق من حفظها');
   const remote=verify.data;
