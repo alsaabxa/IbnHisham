@@ -470,7 +470,7 @@ function normalize_(v){return v instanceof Date?Utilities.formatDate(v,CONFIG.ti
 function normalizeClockSetting_(value){
   if(value===null||value===undefined||value==='')return '';
   if(typeof value==='number'&&isFinite(value)&&value>=0&&value<1){const mins=Math.round(value*1440)%1440;return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');}
-  const s=String(value).trim(),m=s.match(/(?:T|\\s|^)(\\d{1,2}):(\\d{2})(?::\\d{2})?/);
+  const s=String(value).trim(),m=s.match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);
   return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;
 }
 function settingsUpdateIsStale_(ss,incoming){
