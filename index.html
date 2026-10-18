@@ -462,6 +462,7 @@ async function saveSettings(){
  if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='جارٍ الحفظ...'}
  if(st)st.textContent='جارٍ حفظ الإعدادات في Google Sheets...';
  try{
+  const normalizeClock=value=>{const s=String(value==null?'':value).trim();const m=s.match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;};
   const payload=Object.assign({},t);
   const saved=await apiPost('settings',payload,30000);
   if(!saved||!saved.ok)throw new Error((saved&&saved.error)||'لم يؤكد الخادم حفظ الإعدادات');
@@ -469,7 +470,6 @@ async function saveSettings(){
   const verify=await apiGet('settings');
   if(!verify||!verify.ok||!verify.data)throw new Error('تم إرسال الإعدادات لكن تعذر التحقق من حفظها');
   const remote=verify.data;
-  const normalizeClock=value=>{const s=String(value==null?'':value).trim();const m=s.match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;};
   const wantedStart=normalizeClock(t.start||'07:00');
   const savedStart=normalizeClock(remote.start==null?'07:00':remote.start);
   if(savedStart!==wantedStart)throw new Error('وقت الحضور المطلوب '+wantedStart+'، لكن القيمة المقروءة من Google Sheets هي '+(savedStart||'فارغة')+'.');
