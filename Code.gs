@@ -108,7 +108,7 @@ function doPost(e){
           absences:upsertMany_(ss,CONFIG.sheets.absences,d.absences||[]),
           lateness:upsertMany_(ss,CONFIG.sheets.lateness,d.lates||d.lateness||[]),
           signatures:upsertSignatures_(ss,d.signatures||{}),
-          settings:upsertSettings_(ss,d.settings||{}),
+          settings:settingsUpdateIsStale_(ss,d.settings||{})?{saved:false,stale:true}:upsertSettings_(ss,d.settings||{}),
           actions:upsertMany_(ss,CONFIG.sheets.actions,d.actions||[]),
           deletes:{successIds:delSuccess,failedIds:delFailed}
         };
@@ -120,13 +120,18 @@ function doPost(e){
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
     if(action==='settings'){
       const requested=body.data||{};
-      upsertSettings_(ss,requested);
-      SpreadsheetApp.flush();
-      const persisted=readSettings_(ss);
-      const wanted=String(requested.start==null?'':requested.start).trim();
-      const actual=String(persisted.start==null?'':persisted.start).trim();
-      if(wanted&&actual!==wanted)return json_({ok:false,saved:false,action:action,error:'وقت الحضور لم يُحفظ كما طُلب. المطلوب '+wanted+' والموجود '+(actual||'فارغ')+'.'});
-      return json_({ok:true,saved:true,action:action,data:persisted});
+      const lock=LockService.getScriptLock();
+      if(!lock.tryLock(10000))return json_({ok:false,saved:false,action:action,error:'الإعدادات قيد التحديث بطلب آخر؛ أعيدي المحاولة بعد قليل'});
+      try{
+        if(settingsUpdateIsStale_(ss,requested))return json_({ok:false,saved:false,action:action,error:'وصل تحديث أقدم بعد تحديث أحدث؛ أعيدي تحميل الصفحة قبل تعديل الإعدادات'});
+        upsertSettings_(ss,requested);
+        SpreadsheetApp.flush();
+        const persisted=readSettings_(ss);
+        const wanted=normalizeClockSetting_(requested.start);
+        const actual=normalizeClockSetting_(persisted.start);
+        if(wanted&&actual!==wanted)return json_({ok:false,saved:false,action:action,error:'وقت الحضور لم يُحفظ كما طُلب. المطلوب '+wanted+' والموجود '+(actual||'فارغ')+'.'});
+        return json_({ok:true,saved:true,action:action,data:persisted});
+      }finally{lock.releaseLock();}
     }
     if(action==='delete'){
       const d=body.data||{};
@@ -462,6 +467,18 @@ function ensureHeaders_(sh,headers){
 }
 function getOrCreate_(ss,name){let sh=ss.getSheetByName(name);if(!sh)sh=ss.insertSheet(name);return sh;}
 function normalize_(v){return v instanceof Date?Utilities.formatDate(v,CONFIG.timezone,"yyyy-MM-dd'T'HH:mm:ss"):v;}
+function normalizeClockSetting_(value){
+  if(value===null||value===undefined||value==='')return '';
+  if(typeof value==='number'&&isFinite(value)&&value>=0&&value<1){const mins=Math.round(value*1440)%1440;return String(Math.floor(mins/60)).padStart(2,'0')+':'+String(mins%60).padStart(2,'0');}
+  const s=String(value).trim(),m=s.match(/(?:T|\\s|^)(\\d{1,2}):(\\d{2})(?::\\d{2})?/);
+  return m?String(m[1]).padStart(2,'0')+':'+m[2]:s;
+}
+function settingsUpdateIsStale_(ss,incoming){
+  const next=Number(incoming&&incoming.settingsUpdated)||0;
+  if(!next)return false;
+  const current=Number(readSettings_(ss).settingsUpdated)||0;
+  return current>0&&next<current;
+}
 function json_(obj){return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);}
 function onOpen(){
   SpreadsheetApp.getUi().createMenu('منصة ابن هشام').addItem('تهيئة الجداول','setupSheets').addItem('اختبار الاتصال','testConnection').addToUi();
