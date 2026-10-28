@@ -6,7 +6,7 @@ const CONFIG = {
     absences: 'الغياب',
     lateness: 'التأخير',
     signatures: 'Signatures',
-    settings: 'الإعدادات',
+    settings: 'الاعدادات',
     actions: 'الإجراءات'
   }
 };
