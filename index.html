@@ -544,22 +544,20 @@ function buildHP(root){root.querySelectorAll('.hp:not([data-built])').forEach(el
 async function saveLateStartTime(){
  const input=_g('lateStartTime'),status=_g('lateStartStatus'),btn=_g('saveLateStartBtn');
  const wanted=String(input&&input.value||'').trim();
- if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(wanted))return toast('اختر وقت بداية الدوام أولًا');
- const old=String(S().start||'07:00'),t=state.settings;
- const normalizeClock=value=>{const m=String(value==null?'':' '+value).trim().match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:String(value||'').trim()};
- t.start=wanted;t.settingsUpdated=Date.now();
- localStorage.setItem(KEY,JSON.stringify(state));
+ if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(wanted))return toast('اختر وقت بداية الدوام أولًا');
+ const old=String(S().start||'07:00');
+ const normalizeClock=value=>{const m=String(value==null?'':value).trim().match(/(?:T|\\s|^)(\\d{1,2}):(\\d{2})(?::\\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:String(value||'').trim()};
  if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ والتحقق...'}
- if(status)status.textContent='جارٍ حفظ وقت بداية الدوام في Google Sheets...';
+ if(status)status.textContent='جارٍ حفظ وقت بداية الدوام فقط والتحقق منه في Google Sheets...';
  try{
-  const saved=await apiPost('settings',Object.assign({},t),30000);
-  if(!saved||!saved.ok)throw new Error((saved&&saved.error)||'لم يؤكد الخادم حفظ الوقت');
-  if(saved.data&&saved.data.start!=null&&normalizeClock(saved.data.start)!==wanted)throw new Error('أعاد الخادم وقت بداية مختلفًا عن الوقت المطلوب');
+  const saved=await apiPost('setStartTime',{start:wanted},30000);
+  if(!saved||!saved.ok)throw new Error((saved&&saved.error)||'لم يؤكد الخادم حفظ وقت بداية الدوام');
   const verify=await apiGet('settings');
-  if(!verify||!verify.ok||!verify.data)throw new Error('تعذر التحقق من الوقت المحفوظ');
-  const actual=normalizeClock(verify.data.start==null?'07:00':verify.data.start);
-  if(actual!==wanted)throw new Error('وقت بداية الدوام المقروء من Google Sheets هو '+(actual||'فارغ')+' وليس '+wanted);
-  state.settings=Object.assign({},state.settings,verify.data,{start:wanted,settingsUpdated:Number(verify.data.settingsUpdated)||t.settingsUpdated});
+  if(!verify||!verify.ok||!verify.data)throw new Error('تم إرسال الوقت لكن تعذر التحقق من Google Sheets');
+  const actual=normalizeClock(verify.data.start==null?'':verify.data.start);
+  if(actual!==wanted)throw new Error('وقت بداية الدوام المقروء من Google Sheets هو '+(actual||'فارغ')+' وليس '+wanted+'.');
+  state.settings=Object.assign({},state.settings,verify.data,{start:wanted});
+  state.settings.settingsUpdated=Number(verify.data.settingsUpdated)||Date.now();
   localStorage.setItem(KEY,JSON.stringify(state));
   if(_g('settingStart'))_g('settingStart').value=wanted;
   if(status)status.textContent='✓ تم تثبيت وحفظ بداية الدوام: '+fmtT(wanted);
@@ -567,8 +565,9 @@ async function saveLateStartTime(){
  }catch(e){
   state.settings.start=old;localStorage.setItem(KEY,JSON.stringify(state));
   input.value=old;calcLate();
-  if(status)status.textContent='لم يتم تأكيد الحفظ: '+String(e&&e.message||e);
-  setSyncStatus(String(e&&e.message||e),'error');
+  const message=String(e&&e.message||e);
+  if(status)status.textContent='لم يتم تأكيد الحفظ: '+message;
+  setSyncStatus(message,'error');
  }finally{
   if(btn){btn.disabled=false;btn.textContent='🔒 تثبيت وحفظ بداية الدوام'}
  }
