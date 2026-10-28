@@ -201,18 +201,25 @@ function readSignatures_(ss){
   return out;
 }
 function readSettings_(ss){
-  const rows=readSheet_(ss,CONFIG.sheets.settings),out={};
-  rows.forEach(r=>{
-    if(!r.key)return;
-    let value=r.value;
-    // Settings that contain maps/lists (such as employeeEdits) must survive a Sheets round-trip.
+  const sh=getOrCreate_(ss,CONFIG.sheets.settings);
+  const lastRow=sh.getLastRow(),lastCol=sh.getLastColumn(),out={};
+  if(lastRow<2||lastCol<1)return out;
+  const values=sh.getRange(1,1,lastRow,lastCol).getValues();
+  const headers=values[0].map(h=>String(h||'').trim().toLowerCase());
+  const keyCol=headers.indexOf('key'),valueCol=headers.indexOf('value');
+  if(keyCol<0||valueCol<0)return out;
+  values.slice(1).forEach(row=>{
+    const key=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim();
+    if(!key)return;
+    let value=row[valueCol];
+    if(value instanceof Date)value=normalize_(value);
     if(typeof value==='string'){
       const trimmed=value.trim();
       if((trimmed.startsWith('{')&&trimmed.endsWith('}'))||(trimmed.startsWith('[')&&trimmed.endsWith(']'))){
         try{value=JSON.parse(trimmed);}catch(_){/* Keep legacy plain-text values unchanged. */}
       }
     }
-    out[r.key]=value;
+    out[key]=value;
   });
   return out;
 }
@@ -415,43 +422,33 @@ function upsertSettings_(ss,settings){
   const entries=Object.keys(settings||{});
   if(!entries.length)return 0;
   const sh=getOrCreate_(ss,CONFIG.sheets.settings);
-  const headers=['key','value','updatedAt'];
-  ensureHeaders_(sh,headers);
-  const actualHeaders=getHeaders_(sh);
-  const keyCol=actualHeaders.indexOf('key');
-  if(keyCol<0){
-    entries.forEach(k=>{
-      const raw=settings[k];
-      const value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
-      upsertOne_(ss,CONFIG.sheets.settings,{key:k,value:value,updatedAt:new Date().toISOString()});
-    });
-    return entries.length;
-  }
-  const last=sh.getLastRow();
-  const rows=last>1?sh.getRange(2,1,last-1,actualHeaders.length).getValues():[];
+  if(sh.getLastRow()===0||sh.getLastColumn()===0)sh.getRange(1,1,1,3).setValues([['key','value','updatedAt']]);
+  let lastCol=sh.getLastColumn();
+  let headers=sh.getRange(1,1,1,lastCol).getValues()[0].map(h=>String(h||'').trim().toLowerCase());
+  // Repair missing/miscapitalized settings headers without overwriting existing columns.
+  const cols={key:headers.indexOf('key'),value:headers.indexOf('value'),updatedAt:headers.indexOf('updatedat')};
+  ['key','value','updatedAt'].forEach(name=>{
+    if(cols[name]>=0)return;
+    lastCol++;
+    sh.getRange(1,lastCol).setValue(name);
+    cols[name]=lastCol-1;
+  });
+  const lastRow=sh.getLastRow(),rows=lastRow>1?sh.getRange(2,1,lastRow-1,sh.getLastColumn()).getValues():[];
   const rowByKey=new Map();
-  rows.forEach((row,i)=>{const key=String(row[keyCol]??'').trim();if(key)rowByKey.set(key,i);});
-  const updates=new Map(),appends=[];
+  rows.forEach((row,i)=>{
+    const key=String(row[cols.key]===null||row[cols.key]===undefined?'':row[cols.key]).trim();
+    if(key)rowByKey.set(key,i+2);
+  });
   const now=new Date().toISOString();
   entries.forEach(k=>{
-    const raw=settings[k];
-    const value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
-    const record={key:k,value:value,updatedAt:now};
-    const values=actualHeaders.map(h=>record[h]===undefined?'':normalize_(record[h]));
-    const idx=rowByKey.get(String(k));
-    if(idx===undefined)appends.push(values);
-    else updates.set(idx,values);
+    const rowNum=rowByKey.get(String(k).trim())||sh.getLastRow()+1;
+    const raw=settings[k],value=raw!==null&&typeof raw==='object'?JSON.stringify(raw):raw;
+    sh.getRange(rowNum,cols.key+1).setValue(k);
+    sh.getRange(rowNum,cols.value+1).setValue(normalize_(value));
+    sh.getRange(rowNum,cols.updatedAt+1).setValue(now);
+    rowByKey.set(String(k).trim(),rowNum);
   });
-  const indices=[...updates.keys()].sort((a,b)=>a-b);
-  let p=0;
-  while(p<indices.length){
-    let q=p+1;
-    while(q<indices.length&&indices[q]===indices[q-1]+1)q++;
-    const block=indices.slice(p,q);
-    sh.getRange(block[0]+2,1,block.length,actualHeaders.length).setValues(block.map(i=>updates.get(i)));
-    p=q;
-  }
-  if(appends.length)sh.getRange(sh.getLastRow()+1,1,appends.length,actualHeaders.length).setValues(appends);
+  SpreadsheetApp.flush();
   return entries.length;
 }
 function findRow_(sh,keyField,key,headers){
