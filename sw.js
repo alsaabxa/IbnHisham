@@ -1,5 +1,5 @@
-const CACHE_NAME = 'ibnhisham-shell-v1';
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/app-icon.svg'];
+const CACHE_NAME = 'ibnhisham-shell-v2';
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/app-icon.svg', '/icons/app-icon-192.png', '/icons/app-icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
