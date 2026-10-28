@@ -550,7 +550,7 @@ async function saveLateStartTime(){
  if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ والتحقق...'}
  if(status)status.textContent='جارٍ حفظ وقت بداية الدوام فقط والتحقق منه في Google Sheets...';
  try{
-  const saved=await apiPost('setStartTime',{start:wanted},30000);
+  const saved=await apiPost('settings',{start:wanted,settingsUpdated:Date.now()},30000);
   if(!saved||!saved.ok)throw new Error((saved&&saved.error)||'لم يؤكد الخادم حفظ وقت بداية الدوام');
   const verify=await apiGet('settings');
   if(!verify||!verify.ok||!verify.data)throw new Error('تم إرسال الوقت لكن تعذر التحقق من Google Sheets');
