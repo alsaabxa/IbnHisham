@@ -219,7 +219,20 @@ function readSettings_(ss){
   if(lastRow<2||lastCol<1)return out;
   const values=sh.getRange(1,1,lastRow,lastCol).getValues();
   const headers=values[0].map(h=>String(h||'').trim().toLowerCase());
-  const keyCol=headers.indexOf('key'),valueCol=headers.indexOf('value');
+  const keyCol=headers.indexOf('key'),valueCol=headers.indexOf('value'),jsonCol=headers.indexOf('json');
+  // Support the existing key/json schema without creating a competing value column.
+  if(keyCol>=0&&jsonCol>=0&&valueCol<0){
+    values.slice(1).forEach(row=>{
+      const key=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim().toLowerCase();
+      if(key!=='setting'&&key!=='settings')return;
+      let raw=row[jsonCol];
+      if(raw&&typeof raw==='object'&&!Array.isArray(raw)){Object.assign(out,raw);return;}
+      if(typeof raw==='string'&&raw.trim()){
+        try{const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))Object.assign(out,parsed);}catch(_){}
+      }
+    });
+    return out;
+  }
   if(keyCol<0||valueCol<0)return out;
   values.slice(1).forEach(row=>{
     const key=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim();
@@ -229,7 +242,7 @@ function readSettings_(ss){
     if(typeof value==='string'){
       const trimmed=value.trim();
       if((trimmed.startsWith('{')&&trimmed.endsWith('}'))||(trimmed.startsWith('[')&&trimmed.endsWith(']'))){
-        try{value=JSON.parse(trimmed);}catch(_){/* Keep legacy plain-text values unchanged. */}
+        try{value=JSON.parse(trimmed);}catch(_){}
       }
     }
     out[key]=value;
@@ -438,7 +451,31 @@ function upsertSettings_(ss,settings){
   if(sh.getLastRow()===0||sh.getLastColumn()===0)sh.getRange(1,1,1,3).setValues([['key','value','updatedAt']]);
   let lastCol=sh.getLastColumn();
   let headers=sh.getRange(1,1,1,lastCol).getValues()[0].map(h=>String(h||'').trim().toLowerCase());
-  // Repair missing/miscapitalized settings headers without overwriting existing columns.
+  const keyCol=headers.indexOf('key'),jsonCol=headers.indexOf('json'),valueCol=headers.indexOf('value');
+  // Preserve the current key/json layout: merge updates into the existing settings object.
+  if(keyCol>=0&&jsonCol>=0&&valueCol<0){
+    const lastRow=sh.getLastRow();
+    const rows=lastRow>1?sh.getRange(2,1,lastRow-1,sh.getLastColumn()).getValues():[];
+    let targetRow=0,stored={};
+    rows.forEach((row,i)=>{
+      const key=String(row[keyCol]===null||row[keyCol]===undefined?'':row[keyCol]).trim().toLowerCase();
+      if(key==='setting'||key==='settings'){
+        targetRow=i+2;
+        const raw=row[jsonCol];
+        if(raw&&typeof raw==='object'&&!Array.isArray(raw))stored=raw;
+        else if(typeof raw==='string'&&raw.trim()){try{const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))stored=parsed;}catch(_){}}
+      }
+    });
+    if(!targetRow)targetRow=sh.getLastRow()+1;
+    Object.keys(settings).forEach(k=>{stored[k]=settings[k];});
+    sh.getRange(targetRow,keyCol+1).setValue(targetRow<=lastRow?sh.getRange(targetRow,keyCol+1).getValue():'setting');
+    sh.getRange(targetRow,jsonCol+1).setValue(JSON.stringify(stored));
+    SpreadsheetApp.flush();
+    return entries.length;
+  }
+  if(sh.getLastRow()===0||sh.getLastColumn()===0)sh.getRange(1,1,1,3).setValues([['key','value','updatedAt']]);
+  lastCol=sh.getLastColumn();
+  headers=sh.getRange(1,1,1,lastCol).getValues()[0].map(h=>String(h||'').trim().toLowerCase());
   const cols={key:headers.indexOf('key'),value:headers.indexOf('value'),updatedAt:headers.indexOf('updatedat')};
   ['key','value','updatedAt'].forEach(name=>{
     if(cols[name]>=0)return;
