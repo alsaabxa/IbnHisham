@@ -118,6 +118,19 @@ function doPost(e){
       }
     }
     const map={employee:CONFIG.sheets.employees,absence:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,late:CONFIG.sheets.lateness,signature:CONFIG.sheets.signatures};
+    if(action==='setStartTime'){
+      const d=body.data||{},wanted=normalizeClockSetting_(d.start);
+      if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(wanted))return json_({ok:false,saved:false,error:'وقت بداية الدوام غير صالح'});
+      const lock=LockService.getScriptLock();
+      if(!lock.tryLock(10000))return json_({ok:false,saved:false,error:'الإعدادات قيد التحديث؛ أعيدي المحاولة بعد قليل'});
+      try{
+        upsertSettings_(ss,{start:wanted,settingsUpdated:Date.now()});
+        SpreadsheetApp.flush();
+        const persisted=readSettings_(ss),actual=normalizeClockSetting_(persisted.start);
+        if(actual!==wanted)return json_({ok:false,saved:false,error:'لم يتطابق وقت بداية الدوام بعد الحفظ. المطلوب '+wanted+' والموجود '+(actual||'فارغ')+'.',actual:actual});
+        return json_({ok:true,saved:true,start:actual,data:{start:actual,settingsUpdated:persisted.settingsUpdated}});
+      }finally{lock.releaseLock();}
+    }
     if(action==='settings'){
       const requested=body.data||{};
       const lock=LockService.getScriptLock();
