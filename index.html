@@ -544,9 +544,9 @@ function buildHP(root){root.querySelectorAll('.hp:not([data-built])').forEach(el
 async function saveLateStartTime(){
  const input=_g('lateStartTime'),status=_g('lateStartStatus'),btn=_g('saveLateStartBtn');
  const wanted=String(input&&input.value||'').trim();
- if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(wanted))return toast('اختر وقت بداية الدوام أولًا');
+ if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(wanted))return toast('اختر وقت بداية الدوام أولًا');
  const old=String(S().start||'07:00');
- const normalizeClock=value=>{const m=String(value==null?'':value).trim().match(/(?:T|\\s|^)(\\d{1,2}):(\\d{2})(?::\\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:String(value||'').trim()};
+ const normalizeClock=value=>{const m=String(value==null?'':value).trim().match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::\d{2})?/);return m?String(m[1]).padStart(2,'0')+':'+m[2]:String(value||'').trim()};
  if(btn){btn.disabled=true;btn.textContent='جارٍ الحفظ والتحقق...'}
  if(status)status.textContent='جارٍ حفظ وقت بداية الدوام فقط والتحقق منه في Google Sheets...';
  try{
