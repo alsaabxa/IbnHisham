@@ -882,10 +882,16 @@ function deleteAllPortalSignatures_(ss,data){
 function employeeReport_(ss,token){
   const emp=findPortalToken_(ss,token);
   if(!emp)return {ok:false,error:token?'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.':'الرابط غير مكتمل'};
-  // Fail closed: names may be duplicated or changed. Ownership requires an ID.
+  // Older attendance sheets have no employee ID column. Resolve those rows
+  // read-only by exact, unique current name. An explicit ID always takes priority.
+  const employees=readSheet_(ss,CONFIG.sheets.employees);
+  const uniqueNameOwner=employees.filter(e=>String(e.name||'').trim()===String(emp.name||'').trim());
+  const allowLegacyName=!!String(emp.name||'').trim()&&uniqueNameOwner.length===1&&String(uniqueNameOwner[0].id||'').trim()===String(emp.id);
   const belongs=x=>{
     const id=String(x.empId??x.employeeId??x.employeeID??x.employee_id??'').trim();
-    return !!id && id===String(emp.id);
+    if(id)return id===String(emp.id);
+    const name=String(x.name??x.employeeName??x.employee_name??'').trim();
+    return allowLegacyName&&name===String(emp.name).trim();
   };
   const absences=emp.reportType==='late'?[]:readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
   const lates=emp.reportType==='absence'?[]:readSheet_(ss,CONFIG.sheets.lateness).filter(belongs);
