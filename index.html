@@ -912,9 +912,9 @@ async function syncBeforeEmployeeCodes(){
 async function generateSharedSigningCodes(){
  const status=_g('sharedCodesStatus');if(!status)return;
  if(!confirm('سيتم إنشاء رموز للموظفات اللاتي لا يملكن رمزًا فقط، مع الحفاظ على الرموز الحالية. هل تتابعين؟'))return;
- const pin=sharedAdminPin();if(pin===null)return;status.textContent='جارٍ مزامنة قائمة الموظفات ثم إكمال الرموز الناقصة...';
- const synced=await syncBeforeEmployeeCodes();if(!synced){status.textContent='تعذرت مزامنة قائمة الموظفات؛ تحققي من الاتصال ثم حاولي مرة أخرى.';return;}
- status.textContent='جارٍ إكمال الرموز الناقصة...';
+ const pin=sharedAdminPin();if(pin===null)return;
+ // Repair tokens against the server roster without syncing attendance or settings.
+ status.textContent='جارٍ إصلاح ارتباط الرموز وإكمال الناقص من قائمة الموظفات المحفوظة...';
  try{const r=await apiPost('generateEmployeeAccessCodes',{adminPin:pin,portalBaseUrl:window.location.origin+window.location.pathname});
   if(!r||!r.ok){status.textContent=(r&&r.error)||'تعذر إنشاء الرموز';return;}
   const activeCodes=activeSharedSigningCodes(r.codes||[]);renderSharedSigningCodes(activeCodes,r.sharedUrl);status.textContent='تم إصدار '+activeCodes.length+' رمزًا نشطًا. احتفظي بالجدول في مكان آمن.';
