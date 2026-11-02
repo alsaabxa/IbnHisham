@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ibnhisham-shell-v2';
+const CACHE_NAME = 'ibnhisham-shell-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icons/app-icon.svg', '/icons/app-icon-192.png', '/icons/app-icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -35,3 +35,4 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+

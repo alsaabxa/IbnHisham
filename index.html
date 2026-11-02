@@ -3,6 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f2a43"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="رصد"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icons/app-icon-192.png">
+<meta name="referrer" content="no-referrer"><style>body:not(.admin-authorized) > .app{display:none!important}</style>
 <title>منصة رصد الغياب والتأخير للموظفات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -154,10 +155,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 <section id="employees" class="section"><div class="card"><h2>بطاقة الموظفة — تعديل البيانات</h2><div class="grid"><div class="field"><label>اختيار الموظفة</label><select id="editEmpCard" onchange="loadEmpCard()"></select></div><div class="field"><label>اسم الموظفة</label><input id="editEmpName"></div><div class="field"><label>المسمى الوظيفي</label><select id="editEmpJob"></select></div></div><div class="actions"><button class="btn primary" onclick="saveEmpCard()">💾 حفظ وتفعيل التعديل</button></div><div class="mini" style="margin-top:8px">يُحفظ التعديل محليًا ويُزامن مع Google Sheets، ولا يعود الاسم القديم بعد تحديث الصفحة.</div></div><div class="card"><h2>إدارة الموظفات</h2><div class="grid"><div class="field"><label>اسم الموظفة</label><input id="empName"></div><div class="field"><label>المسمى الوظيفي</label><select id="empJob"></select></div></div><div class="actions"><button class="btn primary" onclick="addEmployee()">إضافة موظفة</button></div><div class="card" style="margin-top:18px;background:#f9fbfc"><h2>إضافة أسماء دفعة واحدة</h2><div class="field"><label>اسم في كل سطر</label><textarea id="bulkNames" rows="6"></textarea></div><div class="field" style="margin-top:10px"><label>المسمى الوظيفي للجميع</label><select id="bulkJob"></select></div><div class="actions"><button class="btn secondary" onclick="bulkAdd()">إضافة الأسماء</button></div></div><div class="table-wrap" style="margin-top:18px"><table><thead><tr><th>م</th><th>الاسم</th><th>المسمى</th><th>إجراء</th></tr></thead><tbody id="empTable"></tbody></table></div></div></section>
 <section id="reports" class="section"><div class="card no-print"><h2>التقارير والطباعة</h2><div class="grid"><div class="field"><label>الموظفة</label><select id="repEmp"></select></div><div class="field"><label>نوع التقرير</label><select id="repType" onchange="updRepHint()"><option value="A">A — النموذج الرسمي</option><option value="B">B — التقرير التفصيلي</option></select></div><div class="field"><label>القسم</label><select id="repSection"><option value="absence">الغياب</option><option value="late">التأخير</option></select></div><div class="field"><label>الفترة</label><select id="repPeriod" onchange="setDefaultReportDates()"><option value="week">أسبوعي</option><option value="month" selected>شهري</option><option value="year">سنوي</option></select></div><div class="field"><label>من تاريخ (هجري)</label><div class="hp" data-id="repDateFrom"></div></div><div class="field"><label>إلى تاريخ (هجري)</label><div class="hp" data-id="repDateTo"></div></div></div><div id="repHintA" class="mini" style="margin-top:10px">النموذج A سنوي: يعرض 12 شهرًا متحركًا بدءًا من شهر «من تاريخ»، وينتهي بالشهر نفسه من السنة التالية.</div><div class="actions"><button class="btn primary" onclick="renderReport()">عرض التقرير</button><button class="btn gold" onclick="printReport()">🖨️ طباعة PDF</button><button class="btn secondary" onclick="exportReportExcel()">⬇️ تصدير Excel</button><label class="chk"><input type="checkbox" id="onePagePrint" checked> ضغط التقرير في صفحة واحدة لكل موظفة</label></div></div><div id="report" class="report-box"><div class="empty">اختر الموظفة ونوع التقرير والفترة ثم اضغط «عرض التقرير».</div></div></section>
-<section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label>وقت بداية الدوام</label><input id="settingStart" type="time"><small class="dhint">يُحسب التأخير إذا كان وقت الحضور بعد هذا الوقت.</small></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
+<section id="settings" class="section"><div class="card"><h2>الإدارة والإعدادات</h2><div class="grid"><div class="field"><label for="settingSeason">توقيت الدوام</label><select id="settingSeason" onchange="selectAttendanceSeason(this.value)"><option value="custom">الوقت الحالي / مخصص</option><option value="summer">الصيفي — 6:45 صباحًا</option><option value="winter">الشتوي — 7:15 صباحًا</option></select><label for="settingStart">وقت بداية الدوام</label><input id="settingStart" type="time"><small class="dhint">اختاري التوقيت ثم احفظي الإعدادات. يُستخدم للرصد الجديد فقط؛ تبقى أوقات ودقائق السجلات السابقة كما حُفظت.</small></div><div class="field"><label>اسم المدرسة</label><input id="schoolName"></div><div class="field"><label>الإدارة</label><input id="deptName"></div><div class="field"><label>مديرة المدرسة</label><input id="managerName"></div><div class="field"><label>حد الإجراء الأول للتأخير (دقيقة)</label><input id="settingWarn1" type="number" min="1" value="30"></div><div class="field"><label>حد الإجراء الثاني للتأخير (دقيقة)</label><input id="settingWarn2" type="number" min="1" value="60"></div></div><div class="actions"><button class="btn primary" onclick="saveSettings()">حفظ الإعدادات</button><span id="settingsStatus" class="muted" style="align-self:center"></span></div></div><div class="card" id="employeePortalAdmin"><h2>روابط التقارير الخاصة بالموظفات</h2>
 <div class="card" style="margin-top:14px;background:#f8fbfc">
 <h3 style="margin:0 0 12px;color:var(--navy)">الرابط الموحّد ورموز الموظفات</h3>
-<div class="grid" style="margin:10px 0 14px"><div class="field"><label for="sharedAdminPinInput">كلمة مرور الإدارة لرموز الموظفات</label><input id="sharedAdminPinInput" type="text" value="admin1234" autocomplete="off" spellcheck="false"><small class="dhint">تُستخدم تلقائيًا عند إدارة الرموز. تنبيه: ظهور كلمة المرور في هذه الصفحة يجعلها معروفة لأي شخص يستطيع فتح الإعدادات.</small></div></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px"><h3 style="margin:0;color:var(--navy)">قائمة رموز التوقيع الإلكتروني</h3><button id="sharedCodesVisibilityBtn" class="btn secondary" type="button" onclick="toggleSharedSigningCodesVisibility()">إخفاء قائمة الرموز</button></div>
+<div class="grid" style="margin:10px 0 14px"><div class="field"><label for="sharedAdminPinInput">كلمة مرور الإدارة لرموز الموظفات</label><input id="sharedAdminPinInput" type="password" autocomplete="off" spellcheck="false"><small class="dhint">اتركي الحقل فارغًا لاستخدام الرقم الإداري الذي سجلتِ الدخول به.</small></div></div><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px"><h3 style="margin:0;color:var(--navy)">قائمة رموز التوقيع الإلكتروني</h3><button id="sharedCodesVisibilityBtn" class="btn secondary" type="button" onclick="toggleSharedSigningCodesVisibility()">إخفاء قائمة الرموز</button></div>
 <div class="actions"><button class="btn primary" type="button" onclick="generateSharedSigningCodes()">إنشاء/إعادة إصدار الرموز للجميع</button><button class="btn secondary" type="button" onclick="loadSharedSigningCodes(true)">تحديث قائمة الرموز</button><button class="btn secondary" type="button" onclick="setSharedSigningState(false)">إيقاف الرابط مؤقتًا</button><button class="btn secondary" type="button" onclick="setSharedSigningState(true)">تفعيل الرابط</button><span id="sharedCodesStatus" class="muted" aria-live="polite"></span></div><div id="sharedCodesProgress" hidden role="status" aria-live="polite" style="margin:10px 0;padding:10px 12px;border:1px solid #d7e0e7;border-radius:12px;background:#fff"><div id="sharedCodesProgressText" style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">جارٍ تحميل الرموز...</div><div style="height:8px;border-radius:99px;background:#e8eef2;overflow:hidden"><div id="sharedCodesProgressFill" style="height:100%;width:18%;background:linear-gradient(90deg,#0a8a96,#d4a62f);border-radius:99px;transition:width .25s"></div></div></div><p id="sharedSigningState" class="muted" role="status" style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" title="معلومة" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid currentColor;border-radius:50%;font-size:12px;font-weight:700;cursor:help" data-hint="يمكنك إيقاف الرابط مؤقتًا أو تفعيله دون تغيير الرابط أو الرموز." onclick="this.title=this.dataset.hint">i</span><span>حالة رابط التوقيع</span></p>
 <div id="sharedCodesDisplay"><div id="sharedSignLink" style="margin-top:10px"></div><div id="sharedCodesResult" class="table-wrap" style="margin-top:12px"></div></div>
 </div><div class="card" style="margin-top:14px;background:#f8fbfc">
@@ -259,8 +260,9 @@ state.employees.push(...initialCustomById.values());
 try{const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');state.employees.forEach(e=>{if(edits[e.id]){e.name=edits[e.id].name||e.name;e.job=edits[e.id].job||e.job}})}catch(e){}state.settings.manager='مرفت خليل محمود سمندر';
 state.actions=Array.isArray(state.actions)?state.actions:[];state.pendingDeletes=Array.isArray(state.pendingDeletes)?state.pendingDeletes:[];
 
-async function apiGet(action){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);try{const r=await fetch(url+'?action='+encodeURIComponent(action),{cache:'no-store',signal:controller.signal});const txt=await r.text();let data;try{data=JSON.parse(txt)}catch(parseError){console.warn('API GET non-JSON',txt.slice(0,200));return {ok:false,error:'رد Google Sheets ليس JSON صالحًا؛ تحقق من نشر Apps Script وصلاحية الوصول'}}if(!r.ok)return {ok:false,error:'خطأ HTTP '+r.status+' من Google Sheets'};return data}catch(e){console.warn('API GET',e);return {ok:false,error:e&&e.name==='AbortError'?'تأخر رد Google Sheets أكثر من 60 ثانية؛ تحقق من نشر Apps Script والاتصال':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
-async function apiPost(action,data,timeoutMs=60000){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data}),redirect:'follow',signal:controller.signal});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:e&&e.name==='AbortError'?'انتهت مهلة الاتصال بـ Google Sheets ('+Math.round(timeoutMs/1000)+' ثانية)':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
+let adminCredential='';
+async function apiGet(action){return apiPost('adminRead',{readAction:action});}
+async function apiPost(action,data,timeoutMs=60000){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data,adminPin:adminCredential}),redirect:'follow',signal:controller.signal});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:e&&e.name==='AbortError'?'انتهت مهلة الاتصال بـ Google Sheets ('+Math.round(timeoutMs/1000)+' ثانية)':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
 async function deleteFromSheets(type,id){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return false;const r=await apiPost('delete',{type:type,id:String(id)});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر المزامنة مع Google Sheets أثناء الحذف');return false}
 async function deleteAllFromSheets(type){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return true;const r=await apiPost('deleteAll',{type:type});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر حذف السجلات من Google Sheets');return false}
 let syncTimer=null;
@@ -457,7 +459,7 @@ async function saveSettings(){
  const me=state.employees.find(e=>String(e.name||'').trim()===t.manager.trim())||state.employees.find(e=>e.job==='مديرة');
  if(me)t.managerId=me.id;
  localStorage.setItem(KEY,JSON.stringify(state));refresh();
- if(typeof applySeasonStart==='function')applyStartTime();
+ applyStartTime();
  const st=g('settingsStatus'),btn=document.querySelector('button[onclick="saveSettings()"]');
  if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='جارٍ الحفظ...'}
  if(st)st.textContent='جارٍ حفظ الإعدادات في Google Sheets...';
@@ -572,6 +574,8 @@ async function saveLateStartTime(){
   if(btn){btn.disabled=false;btn.textContent='🔒 تثبيت وحفظ بداية الدوام'}
  }
 }
+function attendanceSeasonTime(season){return season==='summer'?'06:45':season==='winter'?'07:15':null}
+function selectAttendanceSeason(season){const time=attendanceSeasonTime(season);if(!time)return;const input=_g('settingStart');if(input){input.value=time;input.dispatchEvent(new Event('change',{bubbles:true}));}}
 function startFor(){const t=S();return t.start||'07:00'}
 function fmtT(v){if(v===null||v===undefined||v==='')return '';let s=String(v).trim(),H,M,m=s.match(/T(\\d{1,2}):(\\d{2})/i);if(m){H=+m[1];M=+m[2]}else{m=s.match(/^(\\d{1,2}):(\\d{2})/);if(m){H=+m[1];M=+m[2]}else{const d=new Date(s);if(!isNaN(d.getTime())){H=d.getHours();M=d.getMinutes()}else return s}}return ar(H%12||12)+':'+ar(String(M).padStart(2,'0'))+' '+(H<12?'صباحًا':'مساءً')}
 function nowStr(){const d=new Date();return new Intl.DateTimeFormat('ar-SA',{dateStyle:'medium'}).format(d)+' — '+fmtT(d.getHours()+':'+d.getMinutes())}
@@ -686,7 +690,7 @@ document.addEventListener('change',e=>{if(e.target&&e.target.id==='lateDate'){sh
 function schoolName(){const x=S().school;return(!x||x==='الجهة التعليمية')?'مدرسة ابن هشام للطفولة المبكرة':x}
 function dept(){return S().dept||'إدارة تعليم مكة'}
 function mgr(){const t=S(),e=t.managerId&&state.employees.find(x=>String(x.id)===String(t.managerId));return e?e.name:(t.manager||'مرفت خليل سمندر')}
-function fillSettings(){const t=S(),g=_g;g('settingStart').value=t.start||'07:00';g('schoolName').value=schoolName();g('deptName').value=dept();g('managerName').value=mgr();g('settingWarn1').value=t.warn1||30;g('settingWarn2').value=t.warn2||60}
+function fillSettings(){const t=S(),g=_g;g('settingStart').value=t.start||'07:00';if(g('settingSeason'))g('settingSeason').value=t.start==='06:45'?'summer':t.start==='07:15'?'winter':'custom';g('schoolName').value=schoolName();g('deptName').value=dept();g('managerName').value=mgr();g('settingWarn1').value=t.warn1||30;g('settingWarn2').value=t.warn2||60}
 function initRepDefaults(){_g('repSection').value='late';_g('repType').value='A'}
 function repHead(){return '<div class="rhead"><div class="rtxt"><b>وزارة التعليم</b><span>'+dept()+'</span><span>'+schoolName()+'</span></div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div>'}
 function repFoot(e){return '<div class="rfoot"><div><span>الموظفة</span><b>صفية عسيري</b><span>التوقيع: ................................</span></div><div><span>مديرة المدرسة</span><b>مرفت خليل سمندر</b><span>التوقيع: ................................</span></div></div>'}
@@ -851,7 +855,7 @@ function toggleSharedSigningCodesVisibility(){if(sharedCodesHidden){setSharedCod
 function showSharedSigningCodesOnSettings(){if(sharedCodesHidden)return;if(restoreSharedSigningCodesFromSession())return;loadSharedSigningCodes()}
 function clearSharedSigningCodes(){setSharedCodesVisibility(true);const s=_g('sharedCodesStatus');if(s)s.textContent='تم إخفاء قائمة الرموز من الشاشة فقط؛ ما زالت محفوظة في Google Sheets.';}
 
-function sharedAdminPin(){const field=_g('sharedAdminPinInput');return field?field.value.trim():'admin1234';}
+function sharedAdminPin(){const field=_g('sharedAdminPinInput');const pin=(field&&field.value.trim())||adminCredential;if(!pin){const status=_g('sharedCodesStatus');if(status)status.textContent='أدخلي الرقم الإداري أولًا لتحديث الرموز.';return null;}return pin;}
 function activeSharedSigningCodes(codes){return (Array.isArray(codes)?codes:[]).filter(item=>item&&item.active!==false)}
 function renderSharedSigningCodes(codes,sharedUrl){
  codes=activeSharedSigningCodes(codes);
@@ -916,7 +920,10 @@ async function generateSharedSigningCodes(){
   const activeCodes=activeSharedSigningCodes(r.codes||[]);renderSharedSigningCodes(activeCodes,r.sharedUrl);status.textContent='تم إصدار '+activeCodes.length+' رمزًا نشطًا. احتفظي بالجدول في مكان آمن.';
  }catch(e){status.textContent='تعذر الاتصال بالخدمة؛ تأكدي من نشر Code.gs المحدّث.';}
 }
+let sharedCodesLoading=false;
 async function loadSharedSigningCodes(forceRefresh=false){
+ if(sharedCodesLoading)return;
+ if(forceRefresh)setSharedCodesVisibility(false);
  const status=_g('sharedCodesStatus');if(!status)return;
  const progress=_g('sharedCodesProgress'),progressText=_g('sharedCodesProgressText'),progressFill=_g('sharedCodesProgressFill');
  const showProgress=(on,label)=>{if(progress)progress.hidden=!on;if(progressText&&label)progressText.textContent=label;if(progressFill){progressFill.style.width=on?'18%':'0%';progressFill.classList.toggle('indeterminate',!!on)}};
@@ -924,23 +931,26 @@ async function loadSharedSigningCodes(forceRefresh=false){
  const cached=readCachedSharedSigningCodes();
  if(!forceRefresh&&cached){renderSharedSigningCodes(cached.codes,cached.sharedUrl);status.textContent='تم عرض قائمة الرموز المحفوظة تلقائيًا.';showProgress(false);return;}
  const pin=sharedAdminPin();if(pin===null){showProgress(false);return;}
+ sharedCodesLoading=true;
  status.textContent='جارٍ تحميل قائمة الرموز...';showProgress(true,'جارٍ تحميل الرموز');
- const box=_g('sharedCodesResult');if(box)box.innerHTML='<span style="color:#c0392b">جارٍ تحميل القائمة لأول مرة...</span>';
+ const box=_g('sharedCodesResult');const hasVisibleCodes=!!(box&&box.querySelector('table'));
+ if(box&&!hasVisibleCodes)box.textContent='جارٍ تحميل قائمة الرموز...';
  try{
   // Load the saved access-code list directly. Do not run a full data sync first,
   // because that made opening Settings wait on unrelated attendance data.
   const r=await apiPost('listEmployeeAccessCodes',{adminPin:pin},60000);
   if(!r||!r.ok){
    status.textContent=(r&&r.error)||'تعذر تحميل الرموز';
-   if(box)box.textContent='تعذر تحميل قائمة الرموز. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';showProgress(false);
+   if(box&&!hasVisibleCodes)box.textContent='تعذر تحميل قائمة الرموز. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';showProgress(false);
    return;
   }
-  const activeCodes=activeSharedSigningCodes(r.codes||[]);if(progressFill)progressFill.style.width='100%';renderSharedSigningCodes(activeCodes,window.location.origin+window.location.pathname+'?sign=1');
+  if(!Array.isArray(r.codes))throw new Error('استجابة قائمة الرموز غير مكتملة');
+  const activeCodes=activeSharedSigningCodes(r.codes);if(progressFill)progressFill.style.width='100%';renderSharedSigningCodes(activeCodes,window.location.origin+window.location.pathname+'?sign=1');
   status.textContent='تم تحميل '+activeCodes.length+' رمزًا نشطًا وحفظ القائمة لهذه الجلسة.';showProgress(false);
  }catch(e){
   status.textContent='تعذر الاتصال بالخدمة؛ تحققي من نشر Code.gs المحدّث.';
-  if(box)box.textContent='لم تصل استجابة من Google Apps Script. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';showProgress(false);
- }
+  if(box&&!hasVisibleCodes)box.textContent='لم تصل استجابة من Google Apps Script. اضغطي «تحديث قائمة الرموز» للمحاولة مجددًا.';showProgress(false);
+ }finally{sharedCodesLoading=false;showProgress(false);}
 }
 function clearPortalLinks(){
   const box=document.getElementById('portalLinksResult');
@@ -1201,7 +1211,7 @@ async function submitPortalSignature(){
 
 async function initEmployeePortal(){
  const params=new URLSearchParams(location.search),token=params.get('portal');
- if(params.get('sign')==='1'&&!token){
+ if(!token){
   document.body.innerHTML='<main dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:520px;margin:8vh auto;padding:22px;color:#172b3a;background:#f5f8fa"><section style="background:#fff;border:1px solid #dce5eb;border-radius:18px;padding:24px;box-shadow:0 8px 28px #0f2a4310"><h1 style="margin:0 0 8px;color:#0f2a43;font-size:23px">التوقيع الإلكتروني للموظفات</h1><p style="color:#526779">أدخلي رمزك الخاص لعرض تقريرك الرسمي فقط.</p><form id="sharedSignCodeForm"><label for="sharedSignCode" style="display:block;margin:14px 0 6px;font-weight:700">رمز الموظفة</label><input id="sharedSignCode" required autocomplete="one-time-code" maxlength="12" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #cbd7df;border-radius:10px;font-size:18px;text-transform:uppercase" placeholder="أدخلي الرمز هنا"><button id="sharedSignSubmit" type="submit" style="width:100%;margin-top:14px;border:0;border-radius:10px;padding:13px;background:#0f2a43;color:#fff;font-weight:700;font-size:16px;cursor:pointer">عرض تقريري</button><p id="sharedSignError" role="status" style="color:#b42318;margin-bottom:0"></p></form><p style="font-size:12px;color:#6b7c8f;margin-top:16px">إذا لم يعمل الرمز، تواصلي مع الإدارة لتأكيده أو تعديله.</p></section></main>';
   document.getElementById('sharedSignCodeForm').addEventListener('submit',async ev=>{
    ev.preventDefault();const btn=document.getElementById('sharedSignSubmit'),err=document.getElementById('sharedSignError');
@@ -1330,8 +1340,21 @@ function printPortalOriginalReport(){
 }
 
 
-const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.has('portal')||portalParams.get('sign')==='1';
-if(portalMode){initEmployeePortal();}else{loadSignatureNoticeState();renderSignatureNotifications();setTimeout(pollSignatureNotifications,1800);setInterval(pollSignatureNotifications,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollSignatureNotifications()});fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();restoreSharedSigningCodesFromSession();}
+function initAdminLogin(){
+ const gate=document.createElement('main');gate.id='adminLogin';gate.dir='rtl';gate.style.cssText='max-width:420px;margin:10vh auto;padding:24px';
+ gate.innerHTML='<h1>دخول الإدارة</h1><form><label for="adminCredential">الرقم الإداري</label><input id="adminCredential" type="password" required autocomplete="current-password" style="display:block;width:100%;padding:12px;margin:12px 0"><button type="submit" class="btn primary">دخول</button><p role="status"></p></form><p><a href="?sign=1">دخول الموظفات بالرمز الخاص</a></p>';
+ document.body.appendChild(gate);
+ gate.querySelector('form').addEventListener('submit',async event=>{
+  event.preventDefault();const button=gate.querySelector('button');button.disabled=true;
+  adminCredential=gate.querySelector('input').value;
+  const result=await apiGet('ping');
+  if(!result||!result.ok){adminCredential='';gate.querySelector('[role=status]').textContent=(result&&result.error)||'تعذر تسجيل الدخول';button.disabled=false;return;}
+  gate.remove();document.body.classList.add('admin-authorized');startAdminApp();
+ });
+}
+const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.get('admin')!=='1'||portalParams.has('portal')||portalParams.get('sign')==='1';
+if(portalMode){initEmployeePortal();}else{initAdminLogin();}
+function startAdminApp(){loadSignatureNoticeState();renderSignatureNotifications();setTimeout(pollSignatureNotifications,1800);setInterval(pollSignatureNotifications,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollSignatureNotifications()});fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();restoreSharedSigningCodesFromSession();}
 
 let deferredPwaInstall=null;
 const installPwaButton=document.getElementById('installPwaBtn');
@@ -1341,3 +1364,4 @@ window.addEventListener('appinstalled',()=>{if(installPwaButton)installPwaButton
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
 </script></body></html>
+
