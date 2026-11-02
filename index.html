@@ -3,6 +3,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f2a43"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="رصد"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/icons/app-icon-192.png">
+<meta name="referrer" content="no-referrer"><style>body:not(.admin-authorized) > .app{display:none!important}</style>
 <title>منصة رصد الغياب والتأخير للموظفات</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -259,8 +260,9 @@ state.employees.push(...initialCustomById.values());
 try{const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');state.employees.forEach(e=>{if(edits[e.id]){e.name=edits[e.id].name||e.name;e.job=edits[e.id].job||e.job}})}catch(e){}state.settings.manager='مرفت خليل محمود سمندر';
 state.actions=Array.isArray(state.actions)?state.actions:[];state.pendingDeletes=Array.isArray(state.pendingDeletes)?state.pendingDeletes:[];
 
-async function apiGet(action){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),60000);try{const r=await fetch(url+'?action='+encodeURIComponent(action),{cache:'no-store',signal:controller.signal});const txt=await r.text();let data;try{data=JSON.parse(txt)}catch(parseError){console.warn('API GET non-JSON',txt.slice(0,200));return {ok:false,error:'رد Google Sheets ليس JSON صالحًا؛ تحقق من نشر Apps Script وصلاحية الوصول'}}if(!r.ok)return {ok:false,error:'خطأ HTTP '+r.status+' من Google Sheets'};return data}catch(e){console.warn('API GET',e);return {ok:false,error:e&&e.name==='AbortError'?'تأخر رد Google Sheets أكثر من 60 ثانية؛ تحقق من نشر Apps Script والاتصال':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
-async function apiPost(action,data,timeoutMs=60000){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data}),redirect:'follow',signal:controller.signal});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:e&&e.name==='AbortError'?'انتهت مهلة الاتصال بـ Google Sheets ('+Math.round(timeoutMs/1000)+' ثانية)':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
+let adminCredential='';
+async function apiGet(action){return apiPost('adminRead',{readAction:action});}
+async function apiPost(action,data,timeoutMs=60000){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return {ok:false,error:'رابط Google Sheets غير مضبوط'};const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:action,data:data,adminPin:adminCredential}),redirect:'follow',signal:controller.signal});const txt=await resp.text();try{return JSON.parse(txt)}catch(e){console.warn('API non-JSON',txt.slice(0,200));return {ok:false,error:'استجابة غير صالحة من السكربت — تأكد من نشره (Anyone) وتحديث الكود'}}}catch(e){console.warn('API POST',e);return {ok:false,error:e&&e.name==='AbortError'?'انتهت مهلة الاتصال بـ Google Sheets ('+Math.round(timeoutMs/1000)+' ثانية)':'تعذر الاتصال بـ Google Sheets'}}finally{clearTimeout(timeout)}}
 async function deleteFromSheets(type,id){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return false;const r=await apiPost('delete',{type:type,id:String(id)});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر المزامنة مع Google Sheets أثناء الحذف');return false}
 async function deleteAllFromSheets(type){const url=(state.settings&&state.settings.apiUrl||'').trim();if(!url)return true;const r=await apiPost('deleteAll',{type:type});if(r&&r.ok)return true;toast((r&&r.error)||'تعذر حذف السجلات من Google Sheets');return false}
 let syncTimer=null;
@@ -1201,7 +1203,7 @@ async function submitPortalSignature(){
 
 async function initEmployeePortal(){
  const params=new URLSearchParams(location.search),token=params.get('portal');
- if(params.get('sign')==='1'&&!token){
+ if(!token){
   document.body.innerHTML='<main dir="rtl" style="font-family:Cairo,Arial,sans-serif;max-width:520px;margin:8vh auto;padding:22px;color:#172b3a;background:#f5f8fa"><section style="background:#fff;border:1px solid #dce5eb;border-radius:18px;padding:24px;box-shadow:0 8px 28px #0f2a4310"><h1 style="margin:0 0 8px;color:#0f2a43;font-size:23px">التوقيع الإلكتروني للموظفات</h1><p style="color:#526779">أدخلي رمزك الخاص لعرض تقريرك الرسمي فقط.</p><form id="sharedSignCodeForm"><label for="sharedSignCode" style="display:block;margin:14px 0 6px;font-weight:700">رمز الموظفة</label><input id="sharedSignCode" required autocomplete="one-time-code" maxlength="12" style="box-sizing:border-box;width:100%;padding:13px;border:1px solid #cbd7df;border-radius:10px;font-size:18px;text-transform:uppercase" placeholder="أدخلي الرمز هنا"><button id="sharedSignSubmit" type="submit" style="width:100%;margin-top:14px;border:0;border-radius:10px;padding:13px;background:#0f2a43;color:#fff;font-weight:700;font-size:16px;cursor:pointer">عرض تقريري</button><p id="sharedSignError" role="status" style="color:#b42318;margin-bottom:0"></p></form><p style="font-size:12px;color:#6b7c8f;margin-top:16px">إذا لم يعمل الرمز، تواصلي مع الإدارة لتأكيده أو تعديله.</p></section></main>';
   document.getElementById('sharedSignCodeForm').addEventListener('submit',async ev=>{
    ev.preventDefault();const btn=document.getElementById('sharedSignSubmit'),err=document.getElementById('sharedSignError');
@@ -1330,8 +1332,21 @@ function printPortalOriginalReport(){
 }
 
 
-const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.has('portal')||portalParams.get('sign')==='1';
-if(portalMode){initEmployeePortal();}else{loadSignatureNoticeState();renderSignatureNotifications();setTimeout(pollSignatureNotifications,1800);setInterval(pollSignatureNotifications,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollSignatureNotifications()});fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();restoreSharedSigningCodesFromSession();}
+function initAdminLogin(){
+ const gate=document.createElement('main');gate.id='adminLogin';gate.dir='rtl';gate.style.cssText='max-width:420px;margin:10vh auto;padding:24px';
+ gate.innerHTML='<h1>دخول الإدارة</h1><form><label for="adminCredential">الرقم الإداري</label><input id="adminCredential" type="password" required autocomplete="current-password" style="display:block;width:100%;padding:12px;margin:12px 0"><button type="submit" class="btn primary">دخول</button><p role="status"></p></form><p><a href="?sign=1">دخول الموظفات بالرمز الخاص</a></p>';
+ document.body.appendChild(gate);
+ gate.querySelector('form').addEventListener('submit',async event=>{
+  event.preventDefault();const button=gate.querySelector('button');button.disabled=true;
+  adminCredential=gate.querySelector('input').value;
+  const result=await apiGet('ping');
+  if(!result||!result.ok){adminCredential='';gate.querySelector('[role=status]').textContent=(result&&result.error)||'تعذر تسجيل الدخول';button.disabled=false;return;}
+  gate.remove();document.body.classList.add('admin-authorized');startAdminApp();
+ });
+}
+const portalParams=new URLSearchParams(location.search);const portalMode=portalParams.get('admin')!=='1'||portalParams.has('portal')||portalParams.get('sign')==='1';
+if(portalMode){initEmployeePortal();}else{initAdminLogin();}
+function startAdminApp(){loadSignatureNoticeState();renderSignatureNotifications();setTimeout(pollSignatureNotifications,1800);setInterval(pollSignatureNotifications,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollSignatureNotifications()});fillJobs();updRepHint();buildHP(document);buildTP(document);refresh();addAbsenceItem();setDefaultReportDates();initRepDefaults();renderActions();tick();setInterval(tick,30000);refreshFromSheetsFast();restoreSharedSigningCodesFromSession();}
 
 let deferredPwaInstall=null;
 const installPwaButton=document.getElementById('installPwaBtn');
@@ -1341,3 +1356,4 @@ window.addEventListener('appinstalled',()=>{if(installPwaButton)installPwaButton
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
 document.addEventListener('change',e=>{const id=e.target&&e.target.id;if(['settingStart','settingWarn1','settingWarn2','schoolName','deptName','managerName'].includes(id)){clearTimeout(window._ssT);window._ssT=setTimeout(saveSettings,300)}if(id==='arrival'||id==='lateDate'||id==='lateEmp')calcLate()});
 </script></body></html>
+
