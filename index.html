@@ -895,6 +895,32 @@ function clearSharedSigningCodes(){setSharedCodesVisibility(true);const s=_g('sh
 
 function sharedAdminPin(){const field=_g('sharedAdminPinInput');const pin=(field&&field.value.trim())||adminCredential;if(!pin){const status=_g('sharedCodesStatus');if(status)status.textContent='أدخلي الرقم الإداري أولًا لتحديث الرموز.';return null;}return pin;}
 function activeSharedSigningCodes(codes){return (Array.isArray(codes)?codes:[]).filter(item=>item&&item.active!==false)}
+async function sharedReportQR(sharedUrl,printMode){
+ const title='تقارير الغياب والتأخر';
+ const popup=printMode?window.open('','_blank'):null;
+ if(printMode&&!popup){alert('اسمحي بفتح نافذة الطباعة ثم حاولي مجددًا.');return;}
+ if(popup){popup.document.title=title;popup.document.body.textContent='جارٍ تجهيز رمز QR...';}
+ let imageUrl='';
+ try{
+  const url=new URL(sharedUrl);if(url.protocol!=='https:'||url.searchParams.get('sign')!=='1'||url.searchParams.has('portal'))throw new Error('رابط التقارير غير صالح');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+  let response;try{response=await fetch('https://api.qrserver.com/v1/create-qr-code/?size=800x800&margin=40&format=png&data='+encodeURIComponent(url.href),{signal:controller.signal});}finally{clearTimeout(timer);}
+  if(!response.ok)throw new Error('تعذر تجهيز QR');
+  imageUrl=URL.createObjectURL(await response.blob());const img=new Image();
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر تحميل QR'));img.src=imageUrl;});
+  const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=1120;
+  const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,1000,1120);ctx.fillStyle='#0f2a43';ctx.textAlign='center';ctx.direction='rtl';ctx.font='bold 44px Arial';ctx.fillText(title,500,85);ctx.drawImage(img,100,140,800,800);ctx.font='28px Arial';ctx.fillText('امسحي الرمز ثم أدخلي رمز الموظفة',500,1035);
+  const png=canvas.toDataURL('image/png');
+  if(printMode){
+   if(popup.closed)return;
+   popup.document.documentElement.lang='ar';popup.document.documentElement.dir='rtl';
+   const style=popup.document.createElement('style');style.textContent='body{text-align:center;margin:20px;font-family:Arial}img{display:block;width:100%;max-width:650px;margin:auto}button{padding:12px 24px;margin-bottom:15px}@media print{button{display:none}@page{size:A4;margin:15mm}img{max-width:170mm}}';popup.document.head.appendChild(style);popup.document.body.textContent='';
+   const button=popup.document.createElement('button');button.textContent='طباعة';button.onclick=()=>popup.print();popup.document.body.appendChild(button);
+   const picture=popup.document.createElement('img');picture.alt=title;picture.onload=()=>{popup.focus();popup.print();};picture.src=png;popup.document.body.appendChild(picture);
+  }else{const link=document.createElement('a');link.download=title+'.png';link.href=png;document.body.appendChild(link);link.click();link.remove();}
+ }catch(error){if(popup&&!popup.closed)popup.document.body.textContent='تعذر تجهيز QR؛ تحققي من الاتصال وأعيدي المحاولة.';else alert('تعذر تجهيز QR؛ تحققي من الاتصال وأعيدي المحاولة.');}
+ finally{if(imageUrl)URL.revokeObjectURL(imageUrl);}
+}
 function renderSharedSigningCodes(codes,sharedUrl){
  codes=activeSharedSigningCodes(codes);
  const box=_g('sharedCodesResult');if(!box)return;box.innerHTML='';
@@ -904,7 +930,9 @@ function renderSharedSigningCodes(codes,sharedUrl){
   const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff';
   const a=document.createElement('a');a.href=sharedUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent='فتح رابط التوقيع الموحّد';
   const cp=document.createElement('button');cp.type='button';cp.className='btn secondary';cp.textContent='نسخ الرابط';cp.onclick=async()=>{try{await navigator.clipboard.writeText(sharedUrl);cp.textContent='تم النسخ'}catch(e){window.prompt('انسخي الرابط يدويًا:',sharedUrl)}};
-  row.append(a,cp);linkBox.replaceChildren(row);
+  const qr=document.createElement('button');qr.type='button';qr.className='btn secondary';qr.textContent='تحميل QR';qr.onclick=()=>sharedReportQR(sharedUrl,false);
+ const print=document.createElement('button');print.type='button';print.className='btn secondary';print.textContent='طباعة QR';print.onclick=()=>sharedReportQR(sharedUrl,true);
+ row.append(a,cp,qr,print);linkBox.replaceChildren(row);
  }
  if(!codes||!codes.length){box.textContent='لا توجد رموز لعرضها.';return}
  const table=document.createElement('table');table.innerHTML='<thead><tr><th>م</th><th>اسم الموظفة</th><th>الرمز القابل للتعديل</th><th>إرسال واتساب</th><th>حفظ</th></tr></thead><tbody></tbody>';
