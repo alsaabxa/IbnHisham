@@ -16,6 +16,7 @@ function doGet(e) {
     const action=(e&&e.parameter&&e.parameter.action)||'ping';
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
     if(action==='ping') return json_({ok:true,service:'IbnHisham Attendance API',message:'الاتصال يعمل بنجاح',time:new Date().toISOString()});
+    if(action!=='employeeReport')return json_({ok:false,error:'يلزم تسجيل الدخول الإداري للوصول إلى هذه البيانات'});
     const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     if(action==='all') return json_({ok:true,data:getAllData_(ss)});
     if(action==='employeeReport'){
@@ -35,8 +36,20 @@ function doPost(e){
   try{
     const body=JSON.parse((e&&e.postData&&e.postData.contents)||'{}');
     if(!CONFIG.spreadsheetId) return json_({ok:false,error:'لم يتم ضبط spreadsheetId في Code.gs'});
-    const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
     const action=body.action||'save';
+    const publicActions=['redeemEmployeeAccessCode','saveEmployeeSignature'];
+    if(!publicActions.includes(action)&&!portalAdminAuthorized_(body.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح'});
+    const ss=SpreadsheetApp.openById(CONFIG.spreadsheetId);
+    if(action==='adminRead'){
+      const readAction=String((body.data||{}).readAction||'');
+      if(readAction==='ping')return json_({ok:true});
+      if(readAction==='all')return json_({ok:true,data:getAllData_(ss)});
+      if(readAction==='portalSignatures')return json_({ok:true,data:listPortalSignatures_(ss)});
+      if(readAction==='settings')return json_({ok:true,data:readSettings_(ss)});
+      const sheets={employees:CONFIG.sheets.employees,absences:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,lates:CONFIG.sheets.lateness};
+      if(!Object.prototype.hasOwnProperty.call(sheets,readAction))throw new Error('طلب قراءة غير صالح');
+      return json_({ok:true,data:readSheet_(ss,sheets[readAction])});
+    }
     if(action==='generateEmployeeAccessCodes'){
       const d=body.data||{};
       if(!portalAdminAuthorized_(d.adminPin))return json_({ok:false,error:'الرقم الإداري غير مضبوط أو غير صحيح. اضبطي PORTAL_ADMIN_PIN في خصائص المشروع.'});
@@ -734,7 +747,8 @@ function redeemEmployeeAccessCode_(ss,provided){
   for(let i=0;i<values.length;i++){
     const r=values[i];
     if(String(r[0]).toUpperCase()===code && String(r[5]).toUpperCase()!=='FALSE' && r[1]){
-      if(!findPortalToken_(ss,String(r[1])))return {ok:false,error:'الرمز غير صالح حاليًا. تواصلي مع الإدارة.'};
+      const owner=findPortalToken_(ss,String(r[1]));
+      if(!owner||String(owner.id)!==String(r[2])||String(owner.reportType)!==String(r[4]||'all'))return {ok:false,error:'الرمز غير صالح حاليًا. تواصلي مع الإدارة.'};
       return {ok:true,token:String(r[1])};
     }
   }
@@ -767,6 +781,7 @@ function findPortalToken_(ss,token){
       // Always use the current employee name/job from the master Employees sheet.
       // Portal tokens can outlive name corrections, so their stored copy may be stale.
       const current=readSheet_(ss,CONFIG.sheets.employees).find(e=>String(e.id||'').trim()===id);
+      if(!current)return null;
       if(current){
         name=String(current.name||name).trim();
         job=String(current.job||job).trim();
@@ -867,10 +882,10 @@ function deleteAllPortalSignatures_(ss,data){
 function employeeReport_(ss,token){
   const emp=findPortalToken_(ss,token);
   if(!emp)return {ok:false,error:token?'الرابط غير صالح أو تم إلغاؤه. أنشئي رابطًا جديدًا من الإدارة.':'الرابط غير مكتمل'};
+  // Fail closed: names may be duplicated or changed. Ownership requires an ID.
   const belongs=x=>{
     const id=String(x.empId??x.employeeId??x.employeeID??x.employee_id??'').trim();
-    if(id && emp.id && id===emp.id) return true;
-    return String(x.name??x.employeeName??x.employee_name??'').trim()===emp.name;
+    return !!id && id===String(emp.id);
   };
   const absences=emp.reportType==='late'?[]:readSheet_(ss,CONFIG.sheets.absences).filter(belongs);
   const lates=emp.reportType==='absence'?[]:readSheet_(ss,CONFIG.sheets.lateness).filter(belongs);
@@ -888,3 +903,4 @@ function employeeReport_(ss,token){
   })||null;
   return {ok:true,reportType:emp.reportType,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions,signature:signature?{data:signature.data,at:signature.at,type:signature.type}:null}};
 }
+
