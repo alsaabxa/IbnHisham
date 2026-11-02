@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const html=fs.readFileSync(__dirname+'/index.html','utf8');
+const names=['attendanceSeasonTime','selectAttendanceSeason','startFor','timeToMinutes','calcLate'];
+const extract=name=>{const start=html.indexOf('function '+name+'(');return html.slice(start,html.indexOf('\n',start));};
+const records=[{start:'07:00',arrival:'07:10',minutes:10},{start:'06:45',arrival:'07:00',minutes:15}];
+const before=JSON.stringify(records),settings={start:'07:00'},elements={arrival:{value:'07:00'},lateDate:{value:'2026-11-02'},lateMinutes:{value:''},startInfo:{},settingStart:{value:'07:00',dispatchEvent(){settings.start=this.value;}}};
+const ctx=vm.createContext({S:()=>settings,_g:id=>elements[id],Event:class{},fmtT:v=>v});
+vm.runInContext(names.map(extract).join('\n'),ctx);
+assert.equal(ctx.startFor(),'07:00','Existing time stays active until selection');
+ctx.selectAttendanceSeason('summer');assert.equal(ctx.startFor(),'06:45');ctx.calcLate();assert.equal(elements.lateMinutes.value,15);
+ctx.selectAttendanceSeason('winter');assert.equal(ctx.startFor(),'07:15');ctx.calcLate();assert.equal(elements.lateMinutes.value,0);
+elements.arrival.value='07:16';ctx.calcLate();assert.equal(elements.lateMinutes.value,1);
+elements.arrival.value='07:15';ctx.calcLate();assert.equal(elements.lateMinutes.value,0);
+assert.equal(JSON.stringify(records),before);
+assert.equal(ctx.attendanceSeasonTime('custom'),null);
+console.log('PASS: summer 06:45, winter 07:15, late/early/exact arrival calculations, existing time retained until selection, old records unchanged.');
