@@ -859,7 +859,7 @@ function latestReportTime(empId,sec,arr){let max=0;const e=state.employees.find(
 function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b)=>{const db=latestReportTime(b.id,sec,arr),da=latestReportTime(a.id,sec,arr);if(db!==da)return db-da;return String(a.name||'').localeCompare(String(b.name||''),'ar')})}
 async function renderReport(){
  const selectedType=_g('repType').value;
- if(selectedType==='A'){const r=await apiPost('adminRead',{readAction:'monthSignatures'});if(!r||!r.ok){toast('تعذر تحميل التوقيعات الشهرية');return}reportMonthlySignatures={};(r.data||[]).forEach(x=>{reportMonthlySignatures[String(x.empId)+'|'+String(x.monthKey)]=x})}
+ if(selectedType==='A'){const r=await apiPost('adminRead',{readAction:'monthSignatures'});if(!r||!r.ok){toast('تعذر تحميل التوقيعات الشهرية');return}console.info('monthSignatures diagnostic',JSON.stringify((r.data||[]).map(x=>({empId:x.empId,monthKey:x.monthKey,valid:/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(x.data||'')}))));reportMonthlySignatures={};(r.data||[]).forEach(x=>{reportMonthlySignatures[String(x.empId)+'|'+String(x.monthKey)]=x})}
 _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=type==='A'?annualRange(getReportRange()):getReportRange();
 const emp=id?state.employees.find(x=>String(x.id)===String(id)):null;
