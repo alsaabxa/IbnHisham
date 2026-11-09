@@ -45,6 +45,8 @@ function doPost(e){
       if(readAction==='ping')return json_({ok:true});
       if(readAction==='all')return json_({ok:true,data:getAllData_(ss)});
       if(readAction==='portalSignatures')return json_({ok:true,data:listPortalSignatures_(ss)});
+       if(readAction==='monthSignatures')return json_({ok:true,data:monthSignatures_(ss,String((body.data||{}).monthKey||''))});
+       if(readAction==='signatureAudit')return json_({ok:true,data:readSheet_(ss,'EmployeeSignatureAudit')});
       if(readAction==='settings')return json_({ok:true,data:readSettings_(ss)});
       const sheets={employees:CONFIG.sheets.employees,absences:CONFIG.sheets.absences,lateness:CONFIG.sheets.lateness,lates:CONFIG.sheets.lateness};
       if(!Object.prototype.hasOwnProperty.call(sheets,readAction))throw new Error('طلب قراءة غير صالح');
@@ -560,7 +562,7 @@ function portalTokenSheet_(ss){
 }
 function portalSignaturesSheet_(ss){
   const sh=getOrCreate_(ss,PORTAL_SIGNATURES_SHEET_);
-  const headers=['id','token','empId','name','type','data','at','createdAt'];
+  const headers=['id','token','empId','name','type','data','at','createdAt','monthKey','status'];
   if(sh.getLastRow()===0) sh.getRange(1,1,1,headers.length).setValues([headers]);
   else sh.getRange(1,1,1,headers.length).setValues([headers]);
   return sh;
@@ -791,93 +793,14 @@ function findPortalToken_(ss,token){
   }
   return null;
 }
-function saveEmployeeSignature_(ss,data){
-  if(data.shared===true&&!sharedSigningEnabled_())return {ok:false,error:'تم إيقاف رابط التوقيع الموحّد مؤقتًا. لم يتم حفظ التوقيع.'};
-  const token=String(data.token||'');
-  const emp=findPortalToken_(ss,token);
-  if(!emp)return {ok:false,error:'الرابط غير صالح أو تم إلغاؤه. اطلبي رابطًا جديدًا من الإدارة.'};
-  const reportType=String(data.reportType||'all');
-  if(reportType!==emp.reportType)return {ok:false,error:'نوع التقرير لا يطابق الرابط المخصص.'};
-  const image=String(data.data||'');
-  if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image))return {ok:false,error:'بيانات التوقيع غير صالحة.'};
-  if(image.length>1500000)return {ok:false,error:'حجم التوقيع كبير؛ امسحي مساحة التوقيع وأعيدي التوقيع بحجم أصغر.'};
-  const lock=LockService.getScriptLock();
-  if(!lock.tryLock(10000))return {ok:false,error:'الخدمة مشغولة بحفظ عملية أخرى. انتظري قليلًا ثم حاولي مرة أخرى.'};
-  try{
-    const sh=portalSignaturesSheet_(ss);
-    const last=sh.getLastRow();
-    const nowDate=new Date();
-    const today=Utilities.formatDate(nowDate,CONFIG.timezone,'yyyy-MM-dd');
-    const existing=last>1?sh.getRange(2,1,last-1,8).getValues():[];
-    const alreadySignedToday=existing.some(r=>{
-      const sameEmployee=String(r[2]||'')===String(emp.id) || String(r[1]||r[0]||'')===token;
-      if(!sameEmployee)return false;
-      const raw=r[6];
-      if(!raw)return false;
-      const signedAt=raw instanceof Date?raw:new Date(raw);
-      if(isNaN(signedAt.getTime()))return String(raw).slice(0,10)===today;
-      return Utilities.formatDate(signedAt,CONFIG.timezone,'yyyy-MM-dd')===today;
-    });
-    if(alreadySignedToday)return {ok:false,error:'تم اعتماد توقيعك لهذا اليوم بالفعل. يمكنك التوقيع مرة أخرى غدًا.'};
-    const now=nowDate.toISOString();
-    const row=[token,token,String(emp.id),String(emp.name||''),reportType,image,now,now];
-    sh.getRange(sh.getLastRow()+1,1,1,row.length).setValues([row]);
-    SpreadsheetApp.flush();
-    return {ok:true,saved:true,at:now,message:'تم حفظ التوقيع بنجاح'};
-  }finally{
-    lock.releaseLock();
-  }
-}
-function listPortalSignatures_(ss){
-  return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).map(r=>({id:String(r.id||r.token||''),name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||''})).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
-}
-function deletePortalSignature_(ss,data){
-  const id=String(data.id||'').trim();
-  const password=String(data.password||'');
-  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
-  if(!/^[a-f0-9]{32,64}$/i.test(id)) return {ok:false,error:'معرّف التوقيع غير صالح'};
-  const sh=portalSignaturesSheet_(ss);
-  const last=sh.getLastRow();
-  if(last<2) return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
-  const ids=sh.getRange(2,1,last-1,1).getDisplayValues();
-  for(let i=ids.length-1;i>=0;i--){
-    if(String(ids[i][0]||'')===id){
-      sh.deleteRow(i+2);
-      SpreadsheetApp.flush();
-      return {ok:true,deleted:true,id:id,message:'تم حذف التوقيع المحدد'};
-    }
-  }
-  return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
-}
-function deletePortalSignature_(ss,data){
-  const id=String(data.id||'').trim();
-  const password=String(data.password||'');
-  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
-  if(!/^[a-f0-9]{32,64}$/i.test(id)) return {ok:false,error:'معرّف التوقيع غير صالح'};
-  const sh=portalSignaturesSheet_(ss);
-  const last=sh.getLastRow();
-  if(last<2) return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
-  const ids=sh.getRange(2,1,last-1,1).getDisplayValues();
-  for(let i=ids.length-1;i>=0;i--){
-    if(String(ids[i][0]||'')===id){
-      sh.deleteRow(i+2);
-      SpreadsheetApp.flush();
-      return {ok:true,deleted:true,id:id,message:'تم حذف التوقيع المحدد'};
-    }
-  }
-  return {ok:false,error:'التوقيع غير موجود أو سبق حذفه'};
-}
-function deleteAllPortalSignatures_(ss,data){
-  const password=String((data&&data.password)||'');
-  if(password!=='1234') return {ok:false,error:'الرقم السري غير صحيح'};
-  const sh=portalSignaturesSheet_(ss);
-  const last=sh.getLastRow();
-  if(last<2) return {ok:true,deleted:true,count:0,message:'لا توجد توقيعات لحذفها'};
-  const count=last-1;
-  sh.deleteRows(2,count);
-  SpreadsheetApp.flush();
-  return {ok:true,deleted:true,count:count,message:'تم حذف جميع التوقيعات الإلكترونية'};
-}
+function signatureMonthKey_(date){const p=new Intl.DateTimeFormat('en-u-ca-islamic-umalqura',{timeZone:CONFIG.timezone,year:'numeric',month:'numeric'}).formatToParts(date);return p.find(x=>x.type==='year').value+'-'+String(+p.find(x=>x.type==='month').value).padStart(2,'0')}
+function signatureRowMonth_(r){if(r.monthKey)return String(r.monthKey);const d=r.at instanceof Date?r.at:new Date(r.at||r.createdAt||'');return isNaN(d.getTime())?'':signatureMonthKey_(d)}
+function signatureAudit_(ss,action,r,reason){const sh=getOrCreate_(ss,'EmployeeSignatureAudit');sh.getRange(1,1,1,7).setValues([['id','action','signatureId','empId','monthKey','reason','at']]);sh.appendRow([Utilities.getUuid(),action,String(r.id||''),String(r.empId||''),signatureRowMonth_(r),reason||'',new Date().toISOString()])}
+function monthSignatures_(ss,key){if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(key))return [];const out={};readSheet_(ss,PORTAL_SIGNATURES_SHEET_).forEach(r=>{if(String(r.status||'active')==='cancelled'||signatureRowMonth_(r)!==key||!r.empId)return;const id=String(r.empId);if(!out[id]||String(r.at)>String(out[id].at))out[id]={id:r.id,empId:id,monthKey:key,data:r.data,at:r.at}});return Object.values(out)}
+function saveEmployeeSignature_(ss,data){if(data.shared===true&&!sharedSigningEnabled_())return {ok:false,error:'تم إيقاف رابط التوقيع الموحّد مؤقتًا'};const token=String(data.token||''),emp=findPortalToken_(ss,token);if(!emp)return {ok:false,error:'الرابط غير صالح'};if(String(data.reportType||'all')!==emp.reportType)return {ok:false,error:'نوع التقرير لا يطابق الرابط'};const image=String(data.data||'');if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image)||image.length>1500000)return {ok:false,error:'بيانات التوقيع غير صالحة أو كبيرة'};const lock=LockService.getScriptLock();if(!lock.tryLock(10000))return {ok:false,error:'الخدمة مشغولة'};try{const sh=portalSignaturesSheet_(ss),key=signatureMonthKey_(new Date());if(readSheet_(ss,PORTAL_SIGNATURES_SHEET_).some(r=>String(r.empId)===String(emp.id)&&signatureRowMonth_(r)===key&&String(r.status||'active')!=='cancelled'))return {ok:false,error:'تم اعتماد توقيعك لهذا الشهر بالفعل'};const id=Utilities.getUuid().replace(/-/g,''),at=new Date().toISOString();sh.appendRow([id,token,String(emp.id),String(emp.name||''),emp.reportType,image,at,at,key,'active']);signatureAudit_(ss,'signed',{id:id,empId:emp.id,monthKey:key},'');SpreadsheetApp.flush();return {ok:true,saved:true,at:at,monthKey:key}}finally{lock.releaseLock()}}
+function listPortalSignatures_(ss){return readSheet_(ss,PORTAL_SIGNATURES_SHEET_).filter(r=>String(r.status||'active')!=='cancelled').map(r=>({id:String(r.id||''),name:r.name||'',empId:r.empId||'',type:r.type||'all',at:r.at||'',monthKey:signatureRowMonth_(r)})).sort((a,b)=>String(b.at).localeCompare(String(a.at)))}
+function deletePortalSignature_(ss,data){const id=String(data.id||''),reason=String(data.reason||'').trim();if(!id||!reason)return {ok:false,error:'حددي التوقيع وسبب الإلغاء'};const lock=LockService.getScriptLock();if(!lock.tryLock(10000))return {ok:false,error:'الخدمة مشغولة'};try{const sh=portalSignaturesSheet_(ss),rows=readSheet_(ss,PORTAL_SIGNATURES_SHEET_),i=rows.findIndex(r=>String(r.id)===id&&String(r.status||'active')!=='cancelled');if(i<0)return {ok:false,error:'التوقيع غير موجود أو سبق إلغاؤه'};signatureAudit_(ss,'cancelled',rows[i],reason);sh.getRange(i+2,10).setValue('cancelled');SpreadsheetApp.flush();return {ok:true,id:id,message:'تم إلغاء التوقيع وإتاحة إعادة التوقيع'}}finally{lock.releaseLock()}}
+function deleteAllPortalSignatures_(){return {ok:false,error:'الإلغاء الجماعي غير متاح؛ ألغِي كل توقيع مع تسجيل سببه'}}
 
 function employeeReport_(ss,token){
   const emp=findPortalToken_(ss,token);
@@ -900,13 +823,8 @@ function employeeReport_(ss,token){
   const desc=(a,b)=>dateVal(b).localeCompare(dateVal(a));
   absences.sort(desc); lates.sort(desc); actions.sort(desc);
   const signatures=readSheet_(ss,PORTAL_SIGNATURES_SHEET_);
-  const today=Utilities.formatDate(new Date(),CONFIG.timezone,'yyyy-MM-dd');
-  const signature=signatures.find(x=>{
-    if(String(x.token||x.id||'')!==String(token))return false;
-    const raw=x.at||'';
-    const signedAt=raw instanceof Date?raw:new Date(raw);
-    return !isNaN(signedAt.getTime())&&Utilities.formatDate(signedAt,CONFIG.timezone,'yyyy-MM-dd')===today;
-  })||null;
+  const key=signatureMonthKey_(new Date());
+  const signature=signatures.filter(x=>String(x.empId||'')===String(emp.id)&&signatureRowMonth_(x)===key&&String(x.status||'active')!=='cancelled').sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0]||null;
   return {ok:true,reportType:emp.reportType,employee:{id:emp.id,name:emp.name,job:emp.job},data:{absences:absences,lates:lates,actions:actions,signature:signature?{data:signature.data,at:signature.at,type:signature.type}:null}};
 }
 
