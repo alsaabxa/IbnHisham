@@ -1082,15 +1082,12 @@ async function createSelectedEmployeePortalLink(){
 }
 async function deletePortalSignature(id){
  if(!id)return toast('تعذر تحديد التوقيع');
- const reason=prompt('سبب إلغاء التوقيع وإتاحة إعادة التوقيع:');
- if(reason===null)return;
- if(!reason.trim())return toast('يجب إدخال سبب الإلغاء');
- if(!confirm('تأكيد إلغاء التوقيع؟ سيُحفظ السبب في سجل التدقيق.'))return;
- const r=await apiPost('deletePortalSignature',{id:id,reason:reason.trim()});
+ if(!confirm('تأكيد حذف التوقيع؟ ستتاح للموظفة إعادة التوقيع.'))return;
+ const r=await apiPost('deletePortalSignature',{id:id});
  toast(r&&r.ok?'تم الإلغاء وإتاحة إعادة التوقيع':((r&&r.error)||'تعذر إلغاء التوقيع'));
  await refreshPortalSignatureStatus();
 }
-async function deleteAllPortalSignatures(){toast('ألغِي كل توقيع على حدة مع تسجيل سببه')}
+async function deleteAllPortalSignatures(){toast('ألغِي كل توقيع على حدة')}
 
 let portalSignatureRows=[];let reportMonthlySignatures={};
 async function cropReportSignature(data){
