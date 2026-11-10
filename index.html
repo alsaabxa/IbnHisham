@@ -340,8 +340,8 @@ function bulkAdd(){const names=document.getElementById('bulkNames').value.split(
 function delEmp(id){if(!confirm('حذف الموظفة؟'))return;state.employees=state.employees.filter(x=>x.id!==id);state.pendingDeletes.push({type:'employee',id:String(id)});save()}
 function fillEmpCard(){const s=document.getElementById('editEmpCard'),j=document.getElementById('editEmpJob');if(!s||!j)return;const cur=s.value;s.innerHTML=state.employees.map(e=>'<option value="'+e.id+'">'+e.name+'</option>').join('');j.innerHTML=JOBS.map(x=>'<option value="'+x+'">'+x+'</option>').join('');if(state.employees.some(e=>e.id===cur))s.value=cur;loadEmpCard()}
 function loadEmpCard(){const s=document.getElementById('editEmpCard'),e=state.employees.find(x=>x.id===s?.value);if(!e)return;document.getElementById('editEmpName').value=e.name;document.getElementById('editEmpJob').value=e.job}
-function saveEmpCard(){const s=document.getElementById('editEmpCard'),e=state.employees.find(x=>x.id===s?.value);if(!e)return toast('اختر الموظفة');const n=document.getElementById('editEmpName').value.trim(),j=document.getElementById('editEmpJob').value;if(!n)return toast('أدخل اسم الموظفة');e.name=n;e.job=JOBS.includes(j)?j:e.job;const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');edits[e.id]={name:e.name,job:e.job};localStorage.setItem('ibnhisham_employee_edits_v1',JSON.stringify(edits));state.settings.employeeEdits=edits;state.settings.settingsUpdated=Date.now();save();fillEmpCard();s.value=e.id;loadEmpCard();toast('تم تعديل بطاقة الموظفة وتفعيلها')}
-function editEmp(id){const s=document.getElementById('editEmpCard');if(s){s.value=id;loadEmpCard();document.getElementById('editEmpName')?.focus();return}const e=state.employees.find(x=>x.id===id);if(!e)return;const n=prompt('اسم الموظفة',e.name);if(n===null)return;const j=prompt('المسمى الوظيفي\n'+JOBS.join('، '),e.job);if(j===null)return;e.name=n.trim()||e.name;e.job=JOBS.includes(j)?j:e.job;save()}
+function saveEmpCard(){const s=document.getElementById('editEmpCard'),e=state.employees.find(x=>x.id===s?.value);if(!e)return toast('اختر الموظفة');const n=document.getElementById('editEmpName').value.trim(),j=document.getElementById('editEmpJob').value;if(!n)return toast('أدخل اسم الموظفة');if(!confirm('تأكيد حفظ تعديل بيانات الموظفة؟'))return;e.name=n;e.job=JOBS.includes(j)?j:e.job;const edits=JSON.parse(localStorage.getItem('ibnhisham_employee_edits_v1')||'{}');edits[e.id]={name:e.name,job:e.job};localStorage.setItem('ibnhisham_employee_edits_v1',JSON.stringify(edits));state.settings.employeeEdits=edits;state.settings.settingsUpdated=Date.now();save();fillEmpCard();s.value=e.id;loadEmpCard();toast('تم تعديل بطاقة الموظفة وتفعيلها')}
+function editEmp(id){const s=document.getElementById('editEmpCard');if(s){s.value=id;loadEmpCard();document.getElementById('editEmpName')?.focus();return}const e=state.employees.find(x=>x.id===id);if(!e)return;const n=prompt('اسم الموظفة',e.name);if(n===null)return;const j=prompt('المسمى الوظيفي\n'+JOBS.join('، '),e.job);if(j===null)return;if(!confirm('تأكيد تعديل بيانات الموظفة؟'))return;e.name=n.trim()||e.name;e.job=JOBS.includes(j)?j:e.job;save()}
 function toggleAbsenceReportFields(){const urgent=document.getElementById('absType')?.value==='إجازة اضطرارية';document.querySelectorAll('.absence-report-field').forEach(field=>{field.style.display=urgent?'none':''})}
 function addAbsenceItem(){const wrap=document.getElementById('absenceItems'),d=document.createElement('div');d.className='absence-item';d.innerHTML='<div class="absence-head"><b>بيانات الغياب</b><button class="btn danger" onclick="this.parentElement.parentElement.remove()">حذف</button></div><div class="grid"><div class="field"><label>من</label><div class="hp" data-cls="afrom"></div></div><div class="field"><label>إلى</label><div class="hp" data-cls="ato"></div></div><div class="field"><label>عدد الأيام <span class="dhint">(تلقائي — ويمكن تعديله يدويًا)</span></label><input class="adays" type="number" min="1" value="1" data-manual="0"></div><div class="field absence-report-field"><label>رقم التقرير / المرجع</label><input class="aref"></div><div class="field absence-report-field"><label>تاريخ التقرير</label><div class="hp" data-cls="areport"></div></div><div class="field absence-report-field"><label>الجهة / المكان</label><input class="aplace"></div><div class="field absence-report-field" style="grid-column:1/-1"><label>ملاحظات</label><textarea class="anote" rows="2"></textarea></div></div><div class="ainfo mini"></div>';wrap.appendChild(d);toggleAbsenceReportFields();buildHP(d);const fromI=d.querySelector('.afrom'),toI=d.querySelector('.ato'),daysI=d.querySelector('.adays'),info=d.querySelector('.ainfo');
 const upd=()=>{const f=parseDateSafe(fromI.value),t=parseDateSafe(toI.value);let msg=f?fmtHijri(f):'';if(f&&t&&t<f){msg='⚠ تاريخ «إلى» قبل تاريخ «من»'}else if(f&&daysI.dataset.manual!=='1'){daysI.value=t?Math.round((t-f)/86400000)+1:1}info.textContent=msg;if(f){const mm=document.getElementById('absMonth');if(mm)mm.value=HM[hparts(f).m-1]}};
@@ -350,8 +350,6 @@ daysI.addEventListener('input',()=>{daysI.dataset.manual='1'})}
 
 async function deleteRecord(type,id){
 const label=type==='absence'?'سجل الغياب':'سجل التأخير';
-const password=prompt('أدخل الرقم السري لحذف '+label+':');
-if(password!=='1234'){toast('الرقم السري غير صحيح');return}
 if(!confirm('تأكيد حذف '+label+' نهائيًا؟'))return;
 const list=type==='absence'?state.absences:state.lates;
 const idx=list.findIndex(x=>String(x.id)===String(id));
@@ -369,8 +367,6 @@ renderRecordManagement();
 }
 function deleteAllRecords(type){
 const label=type==='absence'?'جميع سجلات الغياب':'جميع سجلات التأخير';
-const password=prompt('أدخل الرقم السري لحذف '+label+':');
-
 if(!confirm('تأكيد حذف '+label+' نهائيًا؟'))return;
 const doomed=(type==='absence'?state.absences:state.lates).map(x=>({type:type==='absence'?'absence':'late',id:String(x.id)}));
 state.pendingDeletes.push(...doomed);
@@ -428,18 +424,20 @@ function saveRecordEdit(){
   const type=editingRecord.type,id=editingRecord.id;if(!type||!id)return;
   const list=type==='absence'?state.absences:state.lates,rec=list.find(x=>String(x.id)===String(id));if(!rec)return toast('السجل غير موجود');
   const emp=state.employees.find(x=>String(x.id)===String(_g('editRecEmp').value));if(!emp)return toast('اختر الموظفة');
+  let changes;
   if(type==='absence'){
     const from=_g('editRecFrom').value,to=_g('editRecTo').value||from,fd=parseDateSafe(from),td=parseDateSafe(to),days=+_g('editRecDays').value||0;
     if(!fd||!td||td<fd)return toast('تاريخ «إلى» يجب ألا يسبق تاريخ «من»');
     if(days<1)return toast('عدد الأيام يجب أن يكون يومًا واحدًا على الأقل');
-    Object.assign(rec,{empId:emp.id,name:emp.name,job:emp.job,type:_g('editRecType').value,month:HM[hparts(fd).m-1],from:from,to:to,days:days,ref:_g('editRecRef').value,reportDate:_g('editRecReport').value,place:_g('editRecPlace').value,note:_g('editRecNote').value});
+    changes={empId:emp.id,name:emp.name,job:emp.job,type:_g('editRecType').value,month:HM[hparts(fd).m-1],from:from,to:to,days:days,ref:_g('editRecRef').value,reportDate:_g('editRecReport').value,place:_g('editRecPlace').value,note:_g('editRecNote').value};
   }else{
     const date=_g('editRecDate').value,arrival=_g('editRecArrival').value;if(!date||!arrival)return toast('أكمل التاريخ ووقت الحضور');
     const start=startFor(date),[ah,am]=arrival.split(':').map(Number),[sh,sm]=start.split(':').map(Number),minutes=Math.max(0,(ah*60+am)-(sh*60+sm));
     if(minutes<=0)return toast('وقت الحضور لا يتجاوز بداية الدوام — لا يوجد تأخير للرصد');
-    Object.assign(rec,{empId:emp.id,name:emp.name,job:emp.job,date:date,arrival:arrival,start:start,minutes:minutes,reason:_g('editRecReason').value,note:_g('editRecNote').value});
+    changes={empId:emp.id,name:emp.name,job:emp.job,date:date,arrival:arrival,start:start,minutes:minutes,reason:_g('editRecReason').value,note:_g('editRecNote').value};
   }
-  cancelRecordEdit();save();toast('تم تعديل الرصد وحفظه بنجاح');
+  if(!confirm('تأكيد حفظ تعديل السجل؟'))return;
+  Object.assign(rec,changes);cancelRecordEdit();save();toast('تم تعديل الرصد وحفظه بنجاح');
 }
 function saveAbsences(){const emp=document.getElementById('absEmp').value,e=state.employees.find(x=>x.id===emp);if(!e)return toast('اختر الموظفة');const items=[...document.querySelectorAll('.absence-item')];if(!items.length)return toast('أضف بيانات غياب');
 const recs=[];for(let i=0;i<items.length;i++){const x=items[i],n=items.length>1?' (غياب '+ar(i+1)+')':'',from=x.querySelector('.afrom').value;if(!from)return toast('حدد تاريخ «من» كاملًا (اليوم والشهر والسنة)'+n);const to=x.querySelector('.ato').value||from,fd=parseDateSafe(from),td=parseDateSafe(to);if(!fd||!td||td<fd)return toast('تاريخ «إلى» يجب ألا يسبق تاريخ «من»'+n);const days=+x.querySelector('.adays').value||0;if(days<1)return toast('عدد الأيام يجب أن يكون يومًا واحدًا على الأقل'+n);recs.push({id:crypto.randomUUID(),empId:emp,name:e.name,job:e.job,type:document.getElementById('absType').value,month:HM[hparts(fd).m-1],from:from,to:to,days:days,ref:x.querySelector('.aref').value,reportDate:x.querySelector('.areport').value,place:x.querySelector('.aplace').value,note:x.querySelector('.anote').value,created:new Date().toISOString()})}
@@ -859,7 +857,7 @@ function latestReportTime(empId,sec,arr){let max=0;const e=state.employees.find(
 function sortEmployeesByLatestReport(list,sec,arr){return list.slice().sort((a,b)=>{const db=latestReportTime(b.id,sec,arr),da=latestReportTime(a.id,sec,arr);if(db!==da)return db-da;return String(a.name||'').localeCompare(String(b.name||''),'ar')})}
 async function renderReport(){
  const selectedType=_g('repType').value;
- if(selectedType==='A'){const r=await apiPost('adminRead',{readAction:'monthSignatures'});if(!r||!r.ok){toast('تعذر تحميل التوقيعات الشهرية');return}console.info('signature-report-check',JSON.stringify((r.data||[]).map(x=>({id:x.empId,month:x.monthKey,valid:/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(x.data||'')}))));reportMonthlySignatures={};(r.data||[]).forEach(x=>{reportMonthlySignatures[String(x.empId)+'|'+String(x.monthKey)]=x})}
+ if(selectedType==='A'){const r=await apiPost('adminRead',{readAction:'monthSignatures'});if(!r||!r.ok){toast('تعذر تحميل التوقيعات الشهرية');return}reportMonthlySignatures={};for(const x of r.data||[]){reportMonthlySignatures[String(x.empId)+'|'+String(x.monthKey)]={...x,data:await cropReportSignature(x.data)}}}
 _g('reports').classList.add('printing');
 const id=_g('repEmp').value,type=_g('repType').value,sec=_g('repSection').value,range=type==='A'?annualRange(getReportRange()):getReportRange();
 const emp=id?state.employees.find(x=>String(x.id)===String(id)):null;
@@ -1095,7 +1093,36 @@ async function deletePortalSignature(id){
 async function deleteAllPortalSignatures(){toast('ألغِي كل توقيع على حدة مع تسجيل سببه')}
 
 let portalSignatureRows=[];let reportMonthlySignatures={};
-function reportSignature(e,y,m){const x=reportMonthlySignatures[String(e.id)+'|'+y+'-'+String(m).padStart(2,'0')];return x&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(x.data||'')?'<img alt="توقيع الموظفة" src="'+x.data+'" style="display:block;max-width:100%;max-height:34px;margin:auto;object-fit:contain">':''}
+async function cropReportSignature(data){
+ if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data||''))return data;
+ return new Promise(resolve=>{
+  const img=new Image();
+  img.onload=()=>{
+   try{
+    const w=img.naturalWidth,h=img.naturalHeight,canvas=document.createElement('canvas');
+    if(!w||!h)return resolve(data);
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
+    const pixels=ctx.getImageData(0,0,w,h).data;
+    let left=w,top=h,right=-1,bottom=-1;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+     if(pixels[(y*w+x)*4+3]<=24)continue;
+     if(x<left)left=x;if(x>right)right=x;if(y<top)top=y;if(y>bottom)bottom=y;
+    }
+    if(right<left)return resolve(data);
+    const pad=Math.max(6,Math.round(Math.min(w,h)*.015));
+    left=Math.max(0,left-pad);top=Math.max(0,top-pad);
+    right=Math.min(w-1,right+pad);bottom=Math.min(h-1,bottom+pad);
+    const out=document.createElement('canvas');out.width=right-left+1;out.height=bottom-top+1;
+    out.getContext('2d').drawImage(canvas,left,top,out.width,out.height,0,0,out.width,out.height);
+    resolve(out.toDataURL('image/png'));
+   }catch(_){resolve(data)}
+  };
+  img.onerror=()=>resolve(data);
+  img.src=data;
+ });
+}
+function reportSignature(e,y,m){const x=reportMonthlySignatures[String(e.id)+'|'+y+'-'+String(m).padStart(2,'0')];return x&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(x.data||'')?'<img alt="توقيع الموظفة" src="'+x.data+'" style="display:block;max-width:100%;max-height:44px;margin:auto;object-fit:contain;filter:drop-shadow(.7px 0 0 #111827) drop-shadow(-.7px 0 0 #111827)">':''}
 function signatureDateParts(value){
  const d=new Date(value);if(!value||isNaN(d.getTime()))return {hijri:'—',gregorian:'—',time:'—'};
  const options={day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Riyadh'};
@@ -1165,7 +1192,7 @@ function setupSignature(){const c=document.getElementById('sigCanvas'),ctx=c.get
 function clearSignature(){const c=document.getElementById('sigCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);document.getElementById('sigStatus').textContent='⚠ بانتظار توقيع الموظفة'}
 function saveAction(){const empId=_g('actionEmp').value,e=state.employees.find(x=>x.id===empId);if(!e)return toast('اختر الموظفة');const date=_g('actionDate').value;if(!date)return toast('اختر التاريخ');const action={id:crypto.randomUUID(),empId:empId,name:e.name,job:e.job,date:date,type:_g('actionType').value,text:_g('actionText').value.trim(),note:_g('actionNote').value.trim(),created:new Date().toISOString()};if(!action.text)return toast('اكتب الإجراء المتخذ');state.actions.push(action);save();_g('actionText').value='';_g('actionNote').value='';renderActions();toast('تم حفظ الإجراء المتخذ')}
 function renderActions(){const el=_g('actionsTable');if(!el)return;if(!state.actions.length){el.innerHTML='<div class="empty">لا توجد إجراءات مسجلة.</div>';return}el.innerHTML='<table><thead><tr><th>الموظفة</th><th>التاريخ</th><th>نوع الإجراء</th><th>الإجراء</th><th>ملاحظات</th><th>حذف</th></tr></thead><tbody>'+state.actions.map(x=>'<tr><td>'+x.name+'</td><td>'+dateCell(x.date)+'</td><td>'+x.type+'</td><td>'+x.text+'</td><td>'+x.note+'</td><td><button class="btn danger" onclick="deleteAction(\''+x.id+'\')">حذف</button></td></tr>').join('')+'</tbody></table>'}
-function deleteAction(id){const p=prompt('أدخل الرقم السري لحذف الإجراء:');if(p!=='1234')return toast('الرقم السري غير صحيح');if(!confirm('تأكيد حذف الإجراء؟'))return;state.actions=state.actions.filter(x=>String(x.id)!==String(id));state.pendingDeletes.push({type:'action',id:String(id)});save();renderActions();toast('تم الحذف بنجاح')}
+function deleteAction(id){if(!confirm('تأكيد حذف الإجراء؟'))return;state.actions=state.actions.filter(x=>String(x.id)!==String(id));state.pendingDeletes.push({type:'action',id:String(id)});save();renderActions();toast('تم الحذف بنجاح')}
 function saveSignature(){const id=document.getElementById('sigEmp').value;if(!id)return toast('اختر الموظفة');const c=document.getElementById('sigCanvas'),data=c.toDataURL('image/png');state.signatures[id]={data:data,type:document.getElementById('sigType').value,at:new Date().toISOString()};save();document.getElementById('sigStatus').textContent='✓ تم الاطلاع والتوقيع — '+new Date().toLocaleString('ar-SA');toast('تم حفظ التوقيع')}
 function tick(){const d=new Date();document.getElementById('clock').innerHTML=fmtHijri(d)+'<br><b>'+new Intl.DateTimeFormat('ar-SA',{dateStyle:'full',timeStyle:'short'}).format(d)+'</b>'}
 function portalDateHtml(value){try{const d=parseDateSafe(value);if(!d)return escH(value??'');return '<div style="font-weight:700;white-space:nowrap">'+escH(WDF.format(d))+' — '+escH(hjStr(d))+'</div><div style="color:#526779;font-size:12px;margin-top:4px;white-space:nowrap">'+escH(grStr(d))+'</div>';}catch(err){return escH(value??'')}}
@@ -1182,14 +1209,14 @@ function setupPortalSignature(){
   const h=Math.max(1,Math.round(rect.height||200));
   if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){
    const old=c.toDataURL('image/png');c.width=Math.round(w*d);c.height=Math.round(h*d);
-   const ctx=c.getContext('2d');if(ctx){ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';
+   const ctx=c.getContext('2d');if(ctx){ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';
     if(old&&old!=='data:,'){const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,w,h);img.src=old;}
    }
   }
  };
  sizeCanvas();
  const d=Math.max(1,window.devicePixelRatio||1),ctx=c.getContext('2d');if(!ctx)return;
- ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';
+ ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=4;ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#111827';
  let drawing=false;
  const point=e=>{const r=c.getBoundingClientRect();return{x:Math.max(0,Math.min(r.width,e.clientX-r.left)),y:Math.max(0,Math.min(r.height,e.clientY-r.top))}};
  const start=e=>{if(e.cancelable)e.preventDefault();drawing=true;c.dataset.signatureDrawn='true';try{if(c.setPointerCapture&&e.pointerId!==undefined)c.setPointerCapture(e.pointerId)}catch(_){}const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+.01,p.y+.01);ctx.stroke()};
