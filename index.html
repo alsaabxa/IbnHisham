@@ -127,7 +127,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:900px){.sync-status{width:100%;order:3}.top{gap:10px}}
 @media(max-width:380px){.cards,.quick{grid-template-columns:1fr}.stat{padding:14px}.card{padding:14px}.actions .btn{flex-basis:100%}.brand{font-size:13px}.sync-status{font-size:10px}}
 @media print{.sync-status,.toast,.menu-toggle{display:none!important}.table-wrap{overflow:visible!important}.report-box{overflow:visible!important}}
-</style>
+ .officer-signature-line{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:3px;white-space:nowrap;line-height:1.1!important}.officer-signature-line .report-officer-signature{display:inline-block!important;width:72px!important;height:28px!important;max-height:28px!important;margin:0!important;vertical-align:middle!important}\n</style>
 <script>
 /* تحديث آمن لنسخة الواجهة فقط — لا يمس بيانات المنصة أو Google Sheets */
 (function(){
@@ -728,7 +728,7 @@ function mgr(){const t=S(),e=t.managerId&&state.employees.find(x=>String(x.id)==
 function fillSettings(){const t=S(),g=_g;g('settingStart').value=t.start||'07:00';if(g('settingSeason'))g('settingSeason').value=t.start==='06:45'?'summer':t.start==='07:15'?'winter':'custom';g('schoolName').value=schoolName();g('deptName').value=dept();g('managerName').value=mgr();g('settingWarn1').value=t.warn1||30;g('settingWarn2').value=t.warn2||60}
 function initRepDefaults(){_g('repSection').value='late';_g('repType').value='A'}
 function repHead(){return '<div class="rhead"><div class="rtxt"><b>وزارة التعليم</b><span>'+dept()+'</span><span>'+schoolName()+'</span></div><img class="rlogo" src="'+LOGO+'" alt="شعار وزارة التعليم"></div>'}
-function reportOfficerSignatureHtml(){return '<img class="report-officer-signature" width="120" height="64" style="display:block;width:120px;max-width:100%;height:64px;object-fit:contain;margin:2px auto 0;background:transparent" src="/assets/safiya-asiri-signature.svg" alt="توقيع صفية عسيري">'}
+function reportOfficerSignatureHtml(){return '<img class="report-officer-signature" width="72" height="28" style="display:inline-block!important;width:72px!important;max-width:72px!important;height:28px!important;max-height:28px!important;object-fit:contain;vertical-align:middle;margin:0 5px;background:transparent" src="/assets/safiya-asiri-signature.svg" alt="توقيع صفية عسيري">'}
 function repFoot(e){return '<div class="rfoot"><div><span>المسؤولة عن التقارير</span><b>صفية عسيري</b><span>التوقيع:</span>'+reportOfficerSignatureHtml()+'</div><div><span>مديرة المدرسة</span><b>مرفت خليل سمندر</b><span>التوقيع: ................................</span></div></div>'}
 const _offCache={};
 function offMap(yr){if(_offCache[yr])return _offCache[yr];const o={};for(let m=1;m<=12;m++)for(let d=1;d<=30;d++){const g=h2g(yr,m,d);o[m+'-'+d]=!g||g.getDay()===5||g.getDay()===6}return _offCache[yr]=o}
@@ -1445,7 +1445,7 @@ function printPortalOriginalReport(){
   '.employee-official-print-page .xt th,.employee-official-print-page .xt td{font-size:7pt!important;padding:1px 1px!important;line-height:1.15!important}'+
   '.employee-official-print-page .xt tbody tr{height:19px!important}'+
   '.employee-official-print-page .rfoot{margin-top:8px!important}'+
-  '.employee-official-print-page .report-officer-signature{max-height:36px!important;object-fit:contain!important}'+
+  '.employee-official-print-page .report-officer-signature{width:72px!important;height:28px!important;max-height:28px!important;object-fit:contain!important}'+
   '}'+
   '</style></head><body>'+
   '<div class="portal-original-print-actions"><button onclick="window.print()">طباعة النماذج الرسمية / PDF</button></div>'+
