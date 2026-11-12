@@ -702,7 +702,7 @@ function latenessForCycleMonth(e,y,m,months){
  return out;
 }
 function bDateCell(d,i){const p=d?hparts(d):null;return '<td class="bdate"><b>'+ar(i)+'</b><small>'+(d?hmName(p.m)+' '+ar(p.y)+'هـ':'')+(d?'<br>'+grStr(d):'')+'</small></td>'}
-function bSignatures(e){return '<div class="bf-sign"><div><b>المسؤولة عن التقارير</b><br><span>صفية عسيري</span><br><span>التوقيع:</span>'+reportOfficerSignatureHtml()+'</div><div><b>مديرة المدرسة</b><br><span>مرفت خليل سمندر</span><br><span>التوقيع: ................................</span></div></div>'}
+function bSignatures(e){return '<div class="bf-sign"><div><b>المسؤولة عن التقارير</b><br><span>صفية عسيري</span><br><span class="officer-signature-line">التوقيع: ـــ '+reportOfficerSignatureHtml()+'</span></div><div><b>مديرة المدرسة</b><br><span>مرفت خليل سمندر</span><br><span>التوقيع: ................................</span></div></div>'}
 function formB(e,y,m,force,cycleMonths){
  const r=monthRecs(e,y,m);
  /* طابق منطق نموذج A: حدد الشهر المطابق بالسنة أولًا، ثم أقرب سنة لنفس الشهر داخل الدورة؛ ولا تخلط سجلات أشهر الغياب مع التأخير. */
@@ -1443,8 +1443,8 @@ function printPortalOriginalReport(){
   '.employee-official-print-page .ft{min-width:0!important;width:100%!important}'+
   '.employee-official-print-page .ft th,.employee-official-print-page .ft td{font-size:8pt!important;padding:1px 2px!important;line-height:1.2!important}'+
   '.employee-official-print-page .xt th,.employee-official-print-page .xt td{font-size:7pt!important;padding:1px 1px!important;line-height:1.15!important}'+
-  '.employee-official-print-page .xt tbody tr{height:19px!important}'+
-  '.employee-official-print-page .rfoot{margin-top:8px!important}'+
+  '.employee-official-print-page .xt tbody tr{height:15px!important}'+
+  '.employee-official-print-page .rfoot{margin-top:3px!important;font-size:10px!important}'+'.employee-official-print-page .rhead{margin-bottom:3px!important}'+'.employee-official-print-page .nbox{margin:3px 0!important;padding:3px 8px!important}'+'.employee-official-print-page .rper,.employee-official-print-page .rnow{margin:2px 0!important}'+'.employee-official-print-page .acts{margin-top:3px!important;gap:4px!important}'+'.employee-official-print-page .acts th,.employee-official-print-page .acts td{padding:2px!important;font-size:8px!important}'+'.employee-official-print-page .officer-signature-line{display:inline-flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;gap:3px!important}'+
   '.employee-official-print-page .report-officer-signature{width:72px!important;height:28px!important;max-height:28px!important;object-fit:contain!important}'+
   '}'+
   '</style></head><body>'+
