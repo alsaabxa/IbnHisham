@@ -1402,8 +1402,56 @@ function printPortalCompactReport(){
 }
 
 function printPortalOriginalReport(){
- // The portal already renders the same official Form A layouts used in Reports.
- window.print();
+ // Print the two official Form A sheets separately from the employee portal.
+ // Isolate the official forms from portal UI, action history, and compact reports.
+ const container=document.getElementById('portalOfficialForms');
+ const forms=container?Array.from(container.children).filter(el=>el.matches('.fa,.fx,.fb')):[];
+ if(!forms.length){
+  alert('تعذر العثور على النماذج الرسمية للطباعة. أعيدي فتح تقرير الموظفة ثم حاولي مجددًا.');
+  return;
+ }
+ const printer=window.open('','_blank');
+ if(!printer){
+  alert('يرجى السماح بفتح نافذة الطباعة من المتصفح، ثم إعادة المحاولة.');
+  return;
+ }
+ const css=Array.from(document.querySelectorAll('style,link[rel="stylesheet"]'))
+  .map(el=>el.outerHTML).join('\n');
+ const reportHtml=forms.map((form,index)=>
+  '<article class="employee-official-print-page" data-report="'+(form.classList.contains('fx')?'absence':'late')+'">'+form.outerHTML+'</article>'
+ ).join('');
+ printer.document.open();
+ printer.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'+
+  '<meta name="viewport" content="width=device-width,initial-scale=1"><title>النماذج الرسمية للموظفة</title>'+
+  '<base href="'+document.baseURI.replace(/"/g,'&quot;')+'">'+css+
+  '<style>'+
+  'html,body{margin:0!important;padding:0!important;background:#fff!important;color:#111!important}'+
+  'body{font-family:Cairo,Arial,sans-serif!important}'+
+  '.employee-official-print-page{display:block!important;box-sizing:border-box;margin:0 auto 15mm;max-width:281mm;break-inside:avoid;page-break-inside:avoid}'+
+  '.employee-official-print-page .fa,.employee-official-print-page .fx,.employee-official-print-page .fb{margin:0!important;zoom:1!important;width:100%!important;break-after:auto!important;page-break-after:auto!important;break-inside:avoid;page-break-inside:avoid}'+
+  '.employee-official-print-page .table-wrap{overflow:visible!important}'+
+  '.employee-official-print-page .xt{min-width:0!important;width:100%!important}'+
+  '.portal-original-print-actions{padding:12px;text-align:center;background:#f3f7f9}'+
+  '.portal-original-print-actions button{border:0;border-radius:8px;background:#0a8a96;color:#fff;font:700 14px Arial;padding:10px 18px}'+
+  '@media print{@page{size:A4 landscape;margin:6mm}'+
+  'html,body{width:auto!important;overflow:visible!important}'+
+  '.portal-original-print-actions{display:none!important}'+
+  '.employee-official-print-page{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;display:block!important;break-before:auto!important;page-break-before:auto!important;break-inside:avoid!important;page-break-inside:avoid!important}'+
+  '.employee-official-print-page:not(:last-child){break-after:page!important;page-break-after:always!important}'+
+  '.employee-official-print-page:last-child{break-after:auto!important;page-break-after:auto!important}'+
+  '.employee-official-print-page .fa,.employee-official-print-page .fx,.employee-official-print-page .fb{display:block!important;width:100%!important;min-height:0!important;height:auto!important;zoom:1!important;break-before:auto!important;break-after:auto!important;page-break-before:auto!important;page-break-after:auto!important}'+
+  '.employee-official-print-page .ft{min-width:0!important;width:100%!important}'+
+  '.employee-official-print-page .ft th,.employee-official-print-page .ft td{font-size:8pt!important;padding:1px 2px!important;line-height:1.2!important}'+
+  '.employee-official-print-page .xt th,.employee-official-print-page .xt td{font-size:7pt!important;padding:1px 1px!important;line-height:1.15!important}'+
+  '.employee-official-print-page .xt tbody tr{height:19px!important}'+
+  '.employee-official-print-page .rfoot{margin-top:8px!important}'+
+  '.employee-official-print-page .report-officer-signature{max-height:36px!important;object-fit:contain!important}'+
+  '}'+
+  '</style></head><body>'+
+  '<div class="portal-original-print-actions"><button onclick="window.print()">طباعة النماذج الرسمية / PDF</button></div>'+
+  reportHtml+'</body></html>');
+ printer.document.close();
+ printer.focus();
 }
 
 
