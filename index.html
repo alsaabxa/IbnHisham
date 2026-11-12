@@ -1323,6 +1323,23 @@ async function initEmployeePortal(){
   const showAbs=portalType==='all'||portalType==='absence';
   const showLate=portalType==='all'||portalType==='late';
   let officialFormsHtml='';
+  // Populate the monthly signature registry before rendering the employee's official Form A.
+  // The portal previously skipped this step, so signed cells appeared empty.
+  const portalMonthSignatures=Array.isArray(d.monthSignatures)?d.monthSignatures:(Array.isArray(result.monthSignatures)?result.monthSignatures:[]);
+  const previousMonthlySignatures=reportMonthlySignatures;
+  reportMonthlySignatures={...previousMonthlySignatures};
+  for(const signature of portalMonthSignatures){
+   const employeeId=signature.empId??signature.employeeId??e.id;
+   const monthKey=String(signature.monthKey||'');
+   if(employeeId!=null&&monthKey&&signature.data){
+    reportMonthlySignatures[String(employeeId)+'|'+monthKey]={...signature,data:await cropReportSignature(signature.data)};
+   }
+  }
+  // A current-month signature can also be returned as data.signature.
+  if(d.signature&&typeof d.signature==='object'&&d.signature.data&&d.signature.monthKey){
+   const sig=d.signature;
+   reportMonthlySignatures[String(sig.empId??e.id)+'|'+String(sig.monthKey)]={...sig,data:await cropReportSignature(sig.data)};
+  }
   const savedPortalState={employees:state.employees,absences:state.absences,lates:state.lates};
   try{
    state.employees=[e];
