@@ -1120,7 +1120,16 @@ async function cropReportSignature(data){
   img.src=data;
  });
 }
-function reportSignature(e,y,m){const x=reportMonthlySignatures[String(e.id)+'|'+y+'-'+String(m).padStart(2,'0')];return x&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(x.data||'')?'<img alt="توقيع الموظفة" src="'+x.data+'" style="display:block;max-width:100%;max-height:44px;margin:auto;object-fit:contain;filter:drop-shadow(.7px 0 0 #111827) drop-shadow(-.7px 0 0 #111827)">':''}
+function reportSignature(e,y,m){
+ const id=String(e.id),month=String(m).padStart(2,'0'),year=String(y);
+ const key=id+'|'+year+'-'+month;
+ let x=reportMonthlySignatures[key];
+ if(!x){
+  x=Object.values(reportMonthlySignatures).find(v=>String(v.empId??v.employeeId??'')===id&&String(v.monthKey||'').replace(/[^0-9]/g,'')===year+month);
+ }
+ const data=x&&(x.data||x.signature||x.image);
+ return typeof data==='string'&&/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(data)?'<img alt="توقيع الموظفة" src="'+data+'" style="display:block;max-width:100%;max-height:44px;margin:auto;object-fit:contain">':'';
+}
 function signatureDateParts(value){
  const d=new Date(value);if(!value||isNaN(d.getTime()))return {hijri:'—',gregorian:'—',time:'—'};
  const options={day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Riyadh'};
